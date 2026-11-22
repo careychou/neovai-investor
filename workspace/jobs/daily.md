@@ -1,23 +1,9 @@
 ---
-title: Daily run
-description: Scan the market, evaluate candidates and recommend today's calls.
+title: Full daily run
+description: Run the whole loop: market scan, candidate evaluation and recommendations.
 ---
 Run the skills in order: user-preference, market-scan, candidate-evaluation, recommendation.
 
-Before you finish, call save_data with the name "today" and this shape, so the Today screen can show it:
+Save each step's data as you go, with the shapes in the other jobs: "market" (jobs/scan.md), "candidates" (jobs/evaluate.md) and "picks" (jobs/recommend.md).
 
-```json
-{
-  "date": "YYYY-MM-DD",
-  "mood": "risk-on | mixed | risk-off, with the reason in one line",
-  "summary": "two to four sentences in markdown",
-  "metrics": [{ "label": "S&P 500", "value": 6012.3, "change": "+0.4%", "note": "source, time" }],
-  "alerts": [{ "level": "info | warn | bad | good", "text": "one line" }],
-  "picks": [{ "ticker": "ABC", "action": "Buy | Sell part | Sell all | Hold", "reason": "one or two lines", "confidence": "high | medium | low", "entry": 0, "target": 0, "stop": 0 }],
-  "watch": [{ "ticker": "XYZ", "reason": "why it stood out" }]
-}
-```
-
-Use "no data" for anything you could not fetch. An empty picks list is a valid result.
-
-Finish with a short report: the mood, the calls, and the cash left.
+Use "no data" for anything you could not fetch. Finish with a short report: the mood, the calls and the cash left.

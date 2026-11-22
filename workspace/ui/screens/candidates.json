@@ -1,0 +1,53 @@
+{
+  "title": "Candidates",
+  "order": 2,
+  "skills": [
+    "candidate-evaluation"
+  ],
+  "blocks": [
+    {
+      "type": "heading",
+      "text": "Candidate evaluation"
+    },
+    {
+      "type": "run",
+      "job": "evaluate",
+      "label": "Evaluate candidates"
+    },
+    {
+      "type": "markdown",
+      "data": "candidates.summary"
+    },
+    {
+      "type": "table",
+      "title": "Ranked",
+      "data": "candidates.ranked",
+      "columns": [
+        "rank",
+        "ticker",
+        "price",
+        "target",
+        "stop",
+        "rr",
+        "volume",
+        "trend",
+        "earnings",
+        "reason"
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Dropped",
+      "data": "candidates.dropped",
+      "columns": [
+        "ticker",
+        "rule"
+      ]
+    },
+    {
+      "type": "report",
+      "title": "Last report",
+      "job": "evaluate"
+    }
+  ]
+}

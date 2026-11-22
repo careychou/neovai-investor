@@ -3,11 +3,11 @@ import { ScreenView, type ScreenHost } from 'neovai-kernel/cards/live-ui/react'
 import { MessageList } from 'neovai-kernel/cards/chat-view/react'
 import { applyEvent, peek, toolLabel, type Item } from 'neovai-kernel/cards/chat-view'
 import type { AppInfo, Goals, MainState } from '../../shared/api'
-import Codify from './Codify'
+import Codify, { type CodifyRequest } from './Codify'
 import Markdown from './Markdown'
 import Settings from './Settings'
 
-const EMPTY: MainState = { screens: [], data: {}, jobs: [], running: [], started: {}, reports: {} }
+const EMPTY: MainState = { screens: [], data: {}, jobs: [], running: [], started: {}, reports: {}, skills: {} }
 
 /** One line on what a run is doing now, from its latest activity. */
 function stepOf(items: Item[] = []): string {
@@ -29,6 +29,7 @@ export default function App() {
   const [tick, setTick] = useState(0)
   const [runs, setRuns] = useState<Record<string, Item[]>>({})
   const [runError, setRunError] = useState('')
+  const [codifyReq, setCodifyReq] = useState<CodifyRequest | null>(null)
   const loadGoals = useCallback(() => { window.api.getGoals().then(setGoals) }, [])
   const loadMain = useCallback(() => {
     window.api.mainState().then((m) => { setMain(m); setTick((t) => t + 1) }).catch(() => {})
@@ -58,6 +59,8 @@ export default function App() {
     renderActivity: (job) => <MessageList items={runs[job] ?? []} Markdown={Markdown} />,
     decide: (rec, decision) => { void window.api.decide(rec, decision) },
     reports: main.reports,
+    skillText: main.skills,
+    codify: (req) => { setCodifyReq({ ...req, at: Date.now() }); setTab('codify') },
     panelProps: { goals },
     Markdown,
     loadPanel: (file) => window.api.loadPanel(file),
@@ -93,10 +96,10 @@ export default function App() {
         {screen && (
           <div className="pane">
             {runError && <div className="error">{runError}</div>}
-            <ScreenView screen={screen.screen} errors={screen.errors} host={host} tick={tick} />
+            <ScreenView screen={screen.screen} name={screen.name} errors={screen.errors} host={host} tick={tick} />
           </div>
         )}
-        <div className="pane chatpane" hidden={current !== 'codify'}><Codify /></div>
+        <div className="pane chatpane" hidden={current !== 'codify'}><Codify request={codifyReq} screens={screens} /></div>
         {current === 'settings' && <div className="pane"><Settings info={info} onGoalsSaved={loadGoals} /></div>}
       </main>
     </div>

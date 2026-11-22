@@ -1,0 +1,20 @@
+---
+title: Candidate evaluation
+description: Check the watch list against the goals with the candidate-evaluation skill.
+---
+Follow the user-preference rules and the candidate-evaluation skill.
+
+The watch list is `watch` in `records/data/market.json`. If that file is missing or its date is not today, run the market-scan skill first and save its result as "market" (the shape in jobs/scan.md).
+
+Before you finish, call save_data with the name "candidates" and this shape:
+
+```json
+{
+  "date": "YYYY-MM-DD",
+  "summary": "one or two sentences in markdown",
+  "ranked": [{ "rank": 1, "ticker": "ABC", "price": 0, "target": 0, "stop": 0, "rr": 1.8, "volume": "1.7x avg", "trend": "+3.8% month", "earnings": "YYYY-MM-DD", "reason": "one line", "source": "site, time" }],
+  "dropped": [{ "ticker": "XYZ", "rule": "the rule that removed it" }]
+}
+```
+
+An empty ranked list is a valid result. Finish with a short report.

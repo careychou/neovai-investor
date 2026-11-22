@@ -4,7 +4,7 @@ order: 3
 ---
 # Candidate evaluation
 
-Input: the watch list from `market-scan`, the rules from `user-preference`, and the numbers in `goals.json`.
+Input: the watch list from `market-scan` (`records/data/market.json` when an earlier run saved it), the rules from `user-preference`, and the numbers in `goals.json`.
 
 ## For each ticker, collect
 
@@ -28,7 +28,7 @@ Input: the watch list from `market-scan`, the rules from `user-preference`, and 
 
 ## Output
 
-- Ranked table, best first: ticker, price, target, stop, reward to risk, and one line of reasoning.
+- Ranked table, best first: ticker, price, target, stop, reward to risk, volume against average, trend, next earnings, and one line of reasoning.
 - Dropped list: each ticker with the rule that removed it.
 
-If nothing passes, say so. An empty list is a valid result.
+If nothing passes, say so. An empty list is a valid result. The Candidates screen shows this.

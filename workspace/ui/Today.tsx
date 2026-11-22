@@ -1,20 +1,9 @@
-import { version } from '../logic'
+interface Market { date?: string; mood?: string }
 
-export interface Goals { earningCapPct: number; lossLimitPct: number; budget: number }
-
-export default function Today({ goals }: { goals: Goals | null }) {
-  return (
-    <div className="today">
-      <h1>Today</h1>
-      <p className="muted">No recommendations yet. The daily run arrives in the next build.</p>
-      {goals && (
-        <div className="cards">
-          <div className="card"><span>Take profit at</span><b>+{goals.earningCapPct}%</b></div>
-          <div className="card"><span>Exit at a loss of</span><b>-{goals.lossLimitPct}%</b></div>
-          <div className="card"><span>Budget</span><b>${goals.budget.toLocaleString()}</b></div>
-        </div>
-      )}
-      <p className="muted small">Workspace logic {version()}</p>
-    </div>
-  )
+/** The market mood as a banner: green when risk-on, red when risk-off. */
+export default function Today({ data }: { data: Record<string, any> }) {
+  const m: Market = data?.market ?? {}
+  if (!m.mood) return <p className="lu-empty">No scan yet. Run the market scan.</p>
+  const tone = /risk-off/i.test(m.mood) ? 'bad' : /risk-on/i.test(m.mood) ? 'good' : 'warn'
+  return <div className={`lu-alert lu-${tone}`} style={{ fontSize: 15 }}><b>Mood</b> · {m.mood}{m.date ? <span className="lu-conf"> {m.date}</span> : null}</div>
 }

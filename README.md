@@ -9,9 +9,14 @@ Not financial advice. The app never places trades or logs in to a brokerage.
 
 ## Status
 
-Version 0.4.0. The app has two halves:
+Version 0.5.0. The app has two halves:
 
-- **Main App**: one tab per screen in `workspace/ui/screens/*.json`. A screen is a
+- **Main App**: one tab per skill, each with its own job: Today (market-scan),
+  Candidates (candidate-evaluation), Recommendations (recommendation: new stocks,
+  sells and changes, with Refresh), Performance (performance-review: outcomes and
+  open positions) and Preferences (user-preference). Each tab has "Change this
+  screen" and a button per skill it is built on, which open Codify on it.
+  A tab is a screen in `workspace/ui/screens/*.json`. A screen is a
   list of built-in blocks (metrics, tables, alerts, recommendations, run buttons,
   reports, markdown) that read data from `workspace/records/data/`. When no block
   fits, a `panel` block shows a React `.tsx` file from `workspace/ui/`, compiled
@@ -47,7 +52,7 @@ tag in `kernel.json`.
 
 ```sh
 git clone https://github.com/careychou/neovai-kernel ../neovai-kernel
-git -C ../neovai-kernel checkout v0.4.0
+git -C ../neovai-kernel checkout v0.5.0
 npm install
 npm run build && npx electron .
 ```

@@ -17,6 +17,10 @@ Input: every file in `records/` and today's live prices.
    - Open: neither yet. Give the gain or loss so far in percent.
 5. Add it up: number of wins, losses and open calls, win rate, average gain, average loss and the total result in dollars against the budget.
 
+## Monitor open positions
+
+For each accepted Buy still open, give the current price, the gain or loss, how far it is from the target and the stop, and one line on what to watch next (an earnings date, a level, news).
+
 ## What to learn
 
 - What worked: patterns shared by the wins (sector, setup, time of day, market mood).

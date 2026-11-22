@@ -1,0 +1,55 @@
+{
+  "title": "Preferences",
+  "order": 5,
+  "skills": [
+    "user-preference"
+  ],
+  "blocks": [
+    {
+      "type": "heading",
+      "text": "Preferences"
+    },
+    {
+      "type": "panel",
+      "file": "ui/Preferences.tsx"
+    },
+    {
+      "type": "run",
+      "job": "preferences",
+      "label": "Summarize my preferences"
+    },
+    {
+      "type": "markdown",
+      "data": "preferences.summary"
+    },
+    {
+      "type": "table",
+      "title": "Considerations",
+      "data": "preferences.considerations",
+      "columns": [
+        "area",
+        "rule",
+        "from"
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Learned from your decisions",
+      "data": "preferences.learned",
+      "columns": [
+        "pattern",
+        "evidence"
+      ]
+    },
+    {
+      "type": "list",
+      "title": "Worth clarifying",
+      "data": "preferences.questions"
+    },
+    {
+      "type": "skill",
+      "title": "The user-preference skill",
+      "name": "user-preference"
+    }
+  ]
+}

@@ -4,7 +4,9 @@ order: 4
 ---
 # Recommendation
 
-Input: the ranked table from `candidate-evaluation`, the open positions in `records/`, and the limits from `user-preference`.
+Input: the ranked table from `candidate-evaluation` (`records/data/candidates.json` when saved), the open positions, and the limits from `user-preference`.
+
+Open positions are the Buy calls the user accepted in `records/data/decisions.json` and has not closed with an accepted Sell all, plus those in `records/data/review.json`. A call the user did not accept is not a position.
 
 ## Open positions first
 
@@ -12,6 +14,7 @@ For each position the user still holds, pick one:
 
 - Sell all: the stop was hit, the reason for buying is no longer true, or the gain reached `earningCapPct`.
 - Sell part: the gain is at least half of the target. Sell half and move the stop to the entry price.
+- Change: keep the position but adjust it, for example raise the stop after a gain, lower the target when momentum fades, or add to it within the limits. Say what changes and why.
 - Hold: none of the above. Give the current gain or loss.
 
 ## New buys
@@ -23,9 +26,15 @@ For each position the user still holds, pick one:
 
 ## Output
 
+Three groups, each possibly empty, shown on the Recommendations screen where the user accepts or declines each call:
+
+- New stocks: Buy calls.
+- Sell: Sell part and Sell all calls.
+- Change: Raise stop, Lower target, Add or Hold calls on positions the user keeps.
+
 One block for each call:
 
-- Action: Buy, Sell part, Sell all or Hold
+- Action
 - Ticker
 - Amount: shares and dollars
 - Entry, target and stop prices

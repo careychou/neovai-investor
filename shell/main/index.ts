@@ -101,6 +101,7 @@ app.whenReady().then(() => {
     onEvent: (chatId, e) => win?.webContents.send(EVENT_CHANNEL, chatId, e)
   })
 
+  const readSkillFile = (name: string) => { try { return fs.readFileSync(path.join(workspace, 'skills', name, 'SKILL.md'), 'utf8') } catch { return '' } }
   const started: Record<string, number> = {}
   const mainState = (): MainState => {
     const jobs = runtime.jobs()
@@ -112,7 +113,8 @@ app.whenReady().then(() => {
     return {
       screens: ui.screens(), data: ui.data(), running: runtime.running(), reports,
       started: Object.fromEntries(runtime.running().map((j) => [j, started[j] ?? Date.now()])),
-      jobs: jobs.map((j) => ({ name: j.name, title: j.title, description: j.description }))
+      jobs: jobs.map((j) => ({ name: j.name, title: j.title, description: j.description })),
+      skills: Object.fromEntries(agent.skills().map((s) => [s.name, readSkillFile(s.name)]))
     }
   }
 

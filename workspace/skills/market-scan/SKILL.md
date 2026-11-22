@@ -24,7 +24,10 @@ Use the web fetch tool. Give every number its source and the time you read it.
 - Mood: one line, risk-on, mixed or risk-off, with the reason.
 - Metrics table: item, value, change, source, time.
 - News and alerts: short bullets.
+- Sectors: each leading or lagging sector with its change and why.
 - Watch list: up to ten tickers worth evaluating, each with the reason it stood out.
+
+The Today screen shows this. The job says how to save it.
 
 ## Sources that worked
 

@@ -29,6 +29,8 @@ export interface MainState {
   /** When each running job started, ms since epoch. */
   started: Record<string, number>
   reports: Record<string, RunReport | null>
+  /** SKILL.md text of every skill, by name, for skill blocks. */
+  skills: Record<string, string>
 }
 
 export interface SendResult { status: 'completed' | 'failed' | 'cancelled' | 'queued'; text: string }

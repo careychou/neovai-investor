@@ -15,7 +15,12 @@ afterEach(() => { if (tmp) fs.rmSync(tmp, { recursive: true, force: true }) })
 describe('shipped workspace', () => {
   it('has screens and panels that load, and jobs for every run block', () => {
     const ui = createLiveUi({ workspace: bundled })
-    expect(ui.check()).toMatch(/^OK: today, recommendations, review/)
+    expect(ui.check()).toMatch(/^OK: today, candidates, recommendations, review, preferences/)
+    // Every screen names the skills it is built on, and each shipped skill has a screen.
+    const skills = fs.readdirSync(path.join(bundled, 'skills'))
+    const used = ui.screens().flatMap((s) => s.screen?.skills ?? [])
+    for (const s of used) expect(skills).toContain(s)
+    expect([...new Set(used)].sort()).toEqual([...skills].sort())
     const runtime = createRuntime({ workspace: bundled, adapter: { async *stream() {} }, settings: () => ({ model: '' }) })
     const jobs = runtime.jobs().map((j) => j.name)
     for (const s of ui.screens()) {
@@ -26,7 +31,7 @@ describe('shipped workspace', () => {
     const at = (s: string) => prompt.indexOf(s)
     expect(at('# Skill: user-preference')).toBeGreaterThan(0)
     expect(at('# Skill: user-preference')).toBeLessThan(at('# Skill: recommendation'))
-    expect(at('# Job: Daily run')).toBeGreaterThan(at('# Skill: recommendation'))
+    expect(at('# Job: Full daily run')).toBeGreaterThan(at('# Skill: recommendation'))
   })
 })
 

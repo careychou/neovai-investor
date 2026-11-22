@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Chat as ChatRow, SkillInfo, SkillText } from '../../shared/api'
+import type { Chat as ChatRow, ScreenState, SkillInfo, SkillText } from '../../shared/api'
 import { applyEvent, fromMessages, type Item } from 'neovai-kernel/cards/chat-view'
 import { MessageList } from 'neovai-kernel/cards/chat-view/react'
 import Markdown from './Markdown'
 
 const LEARN = 'Look at the picks I accepted and declined (records/data/decisions.json) and how past picks did (records/data/review.json and the Outcome sections in records/). Tell me what patterns you see in what I take, what I skip, and what worked. Then propose specific changes to the skills, each with the reason and the evidence. Make a change only after I agree.'
 
+/** A screen asking Codify to change it or one of its skills. `at` makes each click a new request. */
+export interface CodifyRequest { screen: string; title: string; skill?: string; at: number }
+
+const screenAsk = (r: { screen: string; title: string }) => `On the ${r.title} screen (ui/screens/${r.screen}.json), `
+
 /** Where the user tells the agent how the app should behave. */
-export default function Codify() {
+export default function Codify({ request, screens = [] }: { request?: CodifyRequest | null; screens?: ScreenState[] }) {
   const [chats, setChats] = useState<ChatRow[]>([])
   const [active, setActive] = useState<string | null>(null)
   const [items, setItems] = useState<Record<string, Item[]>>({})
@@ -68,6 +73,13 @@ export default function Codify() {
 
   const ask = (text: string) => { setDraft(text); setViewing(null); setTimeout(() => box.current?.focus()) }
   const openSkill = async (name: string) => setViewing(await window.api.readSkill(name))
+  // A screen's "Change this screen" prefills a request about it; a skill chip opens that skill.
+  useEffect(() => {
+    if (!request) return
+    if (request.skill) void openSkill(request.skill)
+    else ask(screenAsk(request))
+  }, [request])
+  const screensOf = (skill: string) => screens.filter((s) => s.screen?.skills?.includes(skill))
   // Reload an open skill when a run changes it.
   useEffect(() => { if (viewing && !running) window.api.readSkill(viewing.name).then((v) => v && setViewing(v)) }, [running, skills])
 
@@ -129,7 +141,10 @@ export default function Codify() {
             <div className="skillviewhead">
               <b>{viewing.name}</b><span className="muted small">{viewing.path}</span>
               <span className="grow" />
-              <button className="primary" onClick={() => ask(`Change the ${viewing.name} skill: `)}>Ask for a change</button>
+              {screensOf(viewing.name).map((s) => (
+                <button key={s.name} title={`Change how the ${s.title} screen shows this skill's results`} onClick={() => ask(screenAsk({ screen: s.name, title: s.title }))}>Change the {s.title} screen</button>
+              ))}
+              <button className="primary" onClick={() => ask(`Change the ${viewing.name} skill: `)}>Change this skill</button>
               <button onClick={() => setViewing(null)}>Close</button>
             </div>
             <div className="skillviewbody"><Markdown text={viewing.text.replace(/^---[\s\S]*?\n---\n/, '')} /></div>

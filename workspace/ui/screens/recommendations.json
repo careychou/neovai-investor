@@ -1,20 +1,54 @@
 {
   "title": "Recommendations",
-  "order": 2,
+  "order": 3,
+  "skills": [
+    "recommendation"
+  ],
   "blocks": [
     {
       "type": "heading",
       "text": "Recommendations"
     },
     {
+      "type": "row",
+      "blocks": [
+        {
+          "type": "run",
+          "job": "recommend",
+          "label": "Refresh recommendations"
+        },
+        {
+          "type": "run",
+          "job": "daily",
+          "label": "Full run (scan, evaluate, recommend)"
+        }
+      ]
+    },
+    {
       "type": "markdown",
-      "text": "Accept the calls you act on and decline the rest. Your choices are saved in `records/data/decisions.json`; the review job scores them, and Codify uses them to improve the skills."
+      "data": "picks.summary"
     },
     {
       "type": "recommendations",
-      "title": "Today's calls",
-      "data": "today.picks",
+      "title": "New stocks",
+      "data": "picks.buys",
       "decide": true
+    },
+    {
+      "type": "recommendations",
+      "title": "Sell",
+      "data": "picks.sells",
+      "decide": true
+    },
+    {
+      "type": "recommendations",
+      "title": "Change",
+      "data": "picks.changes",
+      "decide": true
+    },
+    {
+      "type": "markdown",
+      "data": "picks.cash"
     },
     {
       "type": "table",
@@ -29,6 +63,11 @@
         "target",
         "stop"
       ]
+    },
+    {
+      "type": "report",
+      "title": "Last report",
+      "job": "recommend"
     }
   ]
 }

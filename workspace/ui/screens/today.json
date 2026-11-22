@@ -1,11 +1,18 @@
 {
   "title": "Today",
   "order": 1,
+  "skills": [
+    "market-scan"
+  ],
   "blocks": [
     {
+      "type": "heading",
+      "text": "Today \u00b7 Market scan"
+    },
+    {
       "type": "run",
-      "job": "daily",
-      "label": "Run today's scan"
+      "job": "scan",
+      "label": "Run market scan"
     },
     {
       "type": "panel",
@@ -13,33 +20,47 @@
     },
     {
       "type": "markdown",
-      "data": "today.summary"
+      "data": "market.summary"
     },
     {
       "type": "metrics",
       "title": "Market",
-      "data": "today.metrics"
+      "data": "market.metrics"
     },
     {
       "type": "row",
       "blocks": [
         {
-          "type": "recommendations",
-          "title": "Recommendations",
-          "data": "today.picks",
-          "decide": true
-        },
-        {
           "type": "alerts",
           "title": "Alerts",
-          "data": "today.alerts"
+          "data": "market.alerts"
+        },
+        {
+          "type": "table",
+          "title": "Sectors",
+          "data": "market.sectors",
+          "columns": [
+            "sector",
+            "change",
+            "note"
+          ]
         }
       ]
     },
     {
       "type": "table",
+      "title": "News",
+      "data": "market.news",
+      "columns": [
+        "headline",
+        "why",
+        "source"
+      ]
+    },
+    {
+      "type": "table",
       "title": "Watch list",
-      "data": "today.watch",
+      "data": "market.watch",
       "columns": [
         "ticker",
         "reason"
@@ -48,7 +69,7 @@
     {
       "type": "report",
       "title": "Last report",
-      "job": "daily"
+      "job": "scan"
     }
   ]
 }
