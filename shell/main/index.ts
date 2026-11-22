@@ -4,20 +4,21 @@ import path from 'node:path'
 import type { ChatRequest, ModelAdapter } from 'neovai-kernel/cards/agent-loop'
 import { setToolLimits } from 'neovai-kernel/cards/agent-loop'
 import { ProviderRouter } from 'neovai-kernel/cards/model-providers'
-import { createSettings, type SecretBox, type Settings } from 'neovai-kernel/cards/settings'
+import { createSettings, type SecretBox } from 'neovai-kernel/cards/settings'
 import { webFetch } from 'neovai-kernel/cards/web-fetch'
 import { createRuntime, type Runtime } from 'neovai-kernel/cards/runtime-agent'
 import { createLiveUi, type LiveUi, type Screen } from 'neovai-kernel/cards/live-ui'
 import { createAgent, type Agent } from './agent'
 import { loadGoals, saveGoals } from './goals'
 import { seedWorkspace } from './seed'
+import { APP_DEFAULTS, runtimeModelOf, type AppSettings } from './app-settings'
 import { CHANGED_CHANNEL, CHANNELS, EVENT_CHANNEL, RUN_EVENT_CHANNEL, type Api, type AppInfo, type MainState } from '../shared/api'
 
 app.setName('Neovai Investor')
 
 let win: BrowserWindow | null = null
 let agent: Agent
-let settings: Settings
+let settings: AppSettings
 let router: ProviderRouter
 let runtime: Runtime
 let ui: LiveUi
@@ -70,8 +71,8 @@ app.whenReady().then(() => {
     seal: (v) => safeStorage.encryptString(v).toString('base64'),
     open: (v) => safeStorage.decryptString(Buffer.from(v, 'base64'))
   }
-  const store = createSettings({ dir: dataDir, box })
-  const apply = (s: Settings) => {
+  const store = createSettings<AppSettings>({ dir: dataDir, box, defaults: APP_DEFAULTS })
+  const apply = (s: AppSettings) => {
     settings = s
     router = new ProviderRouter(s.providers.filter((p) => p.enabled !== false))
     setToolLimits(s)
@@ -86,10 +87,11 @@ app.whenReady().then(() => {
   runtime = createRuntime({
     workspace, adapter,
     settings: () => ({
-      model: settings.defaultModel, reasoning: settings.reasoning as never, maxTurns: settings.maxTurnsMain,
+      model: runtimeModelOf(settings), reasoning: settings.reasoning as never, maxTurns: settings.maxTurnsMain,
       maxOutputTokens: settings.maxOutputTokens, maxConcurrency: settings.maxConcurrency
     }),
-    readOnly: ['goals.json'],
+    // Accept and decline are the user's; the agent reads them to learn but never rewrites them.
+    readOnly: ['goals.json', 'records/data/decisions.json'],
     tools: [webFetch],
     onEvent: (_runId, job, e) => win?.webContents.send(RUN_EVENT_CHANNEL, job, e)
   })
@@ -99,6 +101,7 @@ app.whenReady().then(() => {
     onEvent: (chatId, e) => win?.webContents.send(EVENT_CHANNEL, chatId, e)
   })
 
+  const started: Record<string, number> = {}
   const mainState = (): MainState => {
     const jobs = runtime.jobs()
     const reports: MainState['reports'] = {}
@@ -108,6 +111,7 @@ app.whenReady().then(() => {
     }
     return {
       screens: ui.screens(), data: ui.data(), running: runtime.running(), reports,
+      started: Object.fromEntries(runtime.running().map((j) => [j, started[j] ?? Date.now()])),
       jobs: jobs.map((j) => ({ name: j.name, title: j.title, description: j.description }))
     }
   }
@@ -133,11 +137,19 @@ app.whenReady().then(() => {
     },
     stop: async (chatId) => agent.stop(chatId),
     listSkills: async () => agent.skills().map((s) => ({ name: s.name, description: s.description })),
+    readSkill: async (name) => {
+      const s = agent.skills().find((x) => x.name === name)
+      if (!s) return null
+      const file = path.join(workspace, 'skills', s.name, 'SKILL.md')
+      try { return { name: s.name, path: path.relative(workspace, file), text: fs.readFileSync(file, 'utf8') } } catch { return null }
+    },
+    decide: async (rec, decision) => { ui.decide(rec, decision); changed() },
     mainState: async () => mainState(),
     runJob: async (job) => {
-      if (!settings.defaultModel) return { ok: false, error: 'Choose a model in Settings first.' }
+      if (!runtimeModelOf(settings)) return { ok: false, error: 'Choose a model in Settings first.' }
       if (runtime.running().includes(job)) return { ok: false, error: `"${job}" is already running` }
       // Runs in the background; the window follows it through run events and a change notice at each end.
+      started[job] = Date.now()
       runtime.run(job).catch((e) => win?.webContents.send(RUN_EVENT_CHANNEL, job, { kind: 'error', message: String(e?.message ?? e) })).finally(changed)
       changed()
       return { ok: true }

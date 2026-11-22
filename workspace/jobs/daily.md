@@ -13,7 +13,7 @@ Before you finish, call save_data with the name "today" and this shape, so the T
   "summary": "two to four sentences in markdown",
   "metrics": [{ "label": "S&P 500", "value": 6012.3, "change": "+0.4%", "note": "source, time" }],
   "alerts": [{ "level": "info | warn | bad | good", "text": "one line" }],
-  "picks": [{ "ticker": "ABC", "action": "Buy | Sell part | Sell all | Hold", "reason": "one or two lines", "confidence": "high | medium | low", "target": 0, "stop": 0 }],
+  "picks": [{ "ticker": "ABC", "action": "Buy | Sell part | Sell all | Hold", "reason": "one or two lines", "confidence": "high | medium | low", "entry": 0, "target": 0, "stop": 0 }],
   "watch": [{ "ticker": "XYZ", "reason": "why it stood out" }]
 }
 ```

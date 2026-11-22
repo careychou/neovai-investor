@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AppInfo, Goals, ModelGroup, Settings as S } from '../../shared/api'
+import type { AppInfo, Goals, ModelGroup, AppSettings as S } from '../../shared/api'
 
 type Provider = S['providers'][number]
 const KINDS: { id: Provider['kind']; label: string }[] = [
@@ -58,6 +58,16 @@ export default function Settings({ info, onGoalsSaved }: { info: AppInfo | null;
   }
 
   const known = groups.flatMap((g) => g.models)
+  const models = (cur: string) => (
+    <>
+      {cur && !known.includes(cur) && <option value={cur}>{cur}</option>}
+      {groups.map((g) => (
+        <optgroup key={g.provider} label={g.name}>
+          {g.models.map((m) => <option key={m} value={m}>{m}</option>)}
+        </optgroup>
+      ))}
+    </>
+  )
   const num = (v: string) => (v === '' ? 0 : Number(v))
 
   return (
@@ -115,17 +125,20 @@ export default function Settings({ info, onGoalsSaved }: { info: AppInfo | null;
 
       <h2>Agent</h2>
       <div className="row">
-        <Field label={loading ? 'Default model (loading…)' : 'Default model'}>
+        <Field label={loading ? 'Codify model (loading…)' : 'Codify model'}>
           <select value={s.defaultModel} onChange={(e) => setS({ ...s, defaultModel: e.target.value })}>
             <option value="">Choose a model</option>
-            {s.defaultModel && !known.includes(s.defaultModel) && <option value={s.defaultModel}>{s.defaultModel}</option>}
-            {groups.map((g) => (
-              <optgroup key={g.provider} label={g.name}>
-                {g.models.map((m) => <option key={m} value={m}>{m}</option>)}
-              </optgroup>
-            ))}
+            {models(s.defaultModel)}
           </select>
         </Field>
+        <Field label="Runtime agent model (runs jobs)">
+          <select value={s.runtimeModel ?? ''} onChange={(e) => setS({ ...s, runtimeModel: e.target.value })}>
+            <option value="">Same as Codify{s.defaultModel ? ` (${s.defaultModel})` : ''}</option>
+            {models(s.runtimeModel ?? '')}
+          </select>
+        </Field>
+      </div>
+      <div className="row">
         <Field label="Reasoning">
           <select value={s.reasoning} onChange={(e) => setS({ ...s, reasoning: e.target.value as S['reasoning'] })}>
             {['off', 'low', 'medium', 'high'].map((r) => <option key={r} value={r}>{r}</option>)}
@@ -133,7 +146,7 @@ export default function Settings({ info, onGoalsSaved }: { info: AppInfo | null;
         </Field>
         <Field label="Most steps per run"><input type="number" min="1" value={s.maxTurnsMain} onChange={(e) => setS({ ...s, maxTurnsMain: Math.max(1, num(e.target.value)) })} /></Field>
       </div>
-      <p className="muted small">Save first to load the model list for a new provider.</p>
+      <p className="muted small">Reasoning and steps apply to both agents. Save first to load the model list for a new provider.</p>
 
       <div className="savebar">
         <button className="primary" onClick={save}>Save</button>

@@ -17,7 +17,7 @@ import { BLOCK_TYPES, makeCheckUiTool, type LiveUi } from 'neovai-kernel/cards/l
 export const CARDS = ['agent-loop', 'model-providers', 'file-tools', 'shell', 'web-fetch', 'approval', 'session-store', 'settings', 'skills', 'chat-view', 'runtime-agent', 'live-ui']
 
 /** Files in the workspace the agent may read but never change. */
-export const READ_ONLY = ['goals.json']
+export const READ_ONLY = ['goals.json', 'records/data/decisions.json']
 
 export interface AgentSettings {
   defaultModel: string
@@ -63,8 +63,9 @@ const BASE_PROMPT = `You are Codify, the coding agent inside Neovai Investor, a 
 - Jobs: jobs/<name>.md, with title: and description: lines between two --- lines, then the prompt. A job saves what screens show with save_data(name, data), which writes records/data/<name>.json.
 - Skills: skills/<name>/SKILL.md, with description: and order: lines between two --- lines. They say how to do the work.
 - Screens: ui/screens/<name>.json. Each is a tab in the Main App: {"title", "order", "blocks": [...]}. Blocks: ${BLOCK_TYPES.join(', ')}.
-  - heading {text}; markdown {text | data}; metrics {title?, data | items: [{label, value, change?, note?}]}; table {title?, data | rows, columns?}; list {title?, data | items}; alerts {title?, data | items: [{level: info|warn|bad|good, text}]}; recommendations {title?, data | items: [{ticker, action, reason, confidence, target, stop}]}; run {job, label?}; report {job, title?}; panel {file}; row {blocks}.
+  - heading {text}; markdown {text | data}; metrics {title?, data | items: [{label, value, change?, note?}]}; table {title?, data | rows, columns?}; list {title?, data | items}; alerts {title?, data | items: [{level: info|warn|bad|good, text}]}; recommendations {title?, data | items: [{ticker, action, reason, confidence, entry, target, stop}], decide?: true adds Accept and Decline buttons}; run {job, label?}; report {job, title?}; panel {file}; row {blocks}.
   - data is a path into records/data: "today.picks" reads records/data/today.json, key picks.
+- Decisions: the user accepts or declines calls on screens; the app saves them in records/data/decisions.json as {items: [{id, date, ticker, action, decision: accepted|declined, at, ...}]}. It is read-only for both agents. Show it with data "decisions.items".
 - Panels: when no block fits, write a React component in a .tsx file in ui/ and add a panel block. It gets props data (all saved data) and goals. It may import react and relative files in the workspace, nothing else. Style it with the app's classes or inline styles.
 
 # How to work
@@ -72,6 +73,7 @@ const BASE_PROMPT = `You are Codify, the coding agent inside Neovai Investor, a 
 - You may read and change files only inside the workspace folder. goals.json is read-only: only the user changes it, in Settings.
 - Shell commands run in the workspace folder without asking the user. Give each one a short description. Use an async shell for long jobs.
 - After you change a screen or panel, call check_ui and fix every problem it reports. A broken file never blanks the app; it keeps showing the last version that worked, so check.
+- To improve the skills, read decisions.json, records/data/review.json and the record files. Find patterns in what the user accepts, declines, and what worked, backed by at least three calls. Propose each change with its evidence, and edit a skill only after the user agrees.
 - For a change in behavior, edit the skill or job that covers it. For a change in what is shown, edit the screen, and add to the job's save_data shape if new data is needed. Then say which files changed and what the user will see.
 - Say one short sentence before a batch of tool calls.
 - Never print secrets such as API keys.

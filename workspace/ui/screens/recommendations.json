@@ -1,0 +1,34 @@
+{
+  "title": "Recommendations",
+  "order": 2,
+  "blocks": [
+    {
+      "type": "heading",
+      "text": "Recommendations"
+    },
+    {
+      "type": "markdown",
+      "text": "Accept the calls you act on and decline the rest. Your choices are saved in `records/data/decisions.json`; the review job scores them, and Codify uses them to improve the skills."
+    },
+    {
+      "type": "recommendations",
+      "title": "Today's calls",
+      "data": "today.picks",
+      "decide": true
+    },
+    {
+      "type": "table",
+      "title": "Your decisions",
+      "data": "decisions.items",
+      "columns": [
+        "date",
+        "ticker",
+        "action",
+        "decision",
+        "entry",
+        "target",
+        "stop"
+      ]
+    }
+  ]
+}

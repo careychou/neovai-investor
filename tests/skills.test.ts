@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { loadSkills } from 'neovai-kernel/cards/skills'
+import { createHash } from 'node:crypto'
 import { seedWorkspace } from '../shell/main/seed'
 
 const defaults = path.join(__dirname, '..', 'workspace', 'skills')
@@ -80,5 +81,29 @@ describe('seedWorkspace', () => {
     seedWorkspace(bundled, own)
     expect(fs.readFileSync(path.join(own, 'goals.json'), 'utf8')).toBe('mine')
     expect(fs.readFileSync(path.join(own, 'skills', 'mine', 'SKILL.md'), 'utf8')).toBe('edited')
+  })
+
+  it('updates a file the user never edited, and leaves an edited one alone', () => {
+    fs.writeFileSync(path.join(bundled, 'goals.json'), 'v1')
+    seedWorkspace(bundled, own)
+    fs.mkdirSync(path.join(bundled, 'jobs'))
+    fs.writeFileSync(path.join(bundled, 'jobs', 'daily.md'), 'v1')
+    seedWorkspace(bundled, own)
+    fs.writeFileSync(path.join(bundled, 'goals.json'), 'v2')
+    fs.writeFileSync(path.join(bundled, 'jobs', 'daily.md'), 'v2')
+    fs.writeFileSync(path.join(own, 'goals.json'), 'mine')
+    expect(seedWorkspace(bundled, own)).toEqual(['jobs/daily.md'])
+    expect(fs.readFileSync(path.join(own, 'jobs', 'daily.md'), 'utf8')).toBe('v2')
+    expect(fs.readFileSync(path.join(own, 'goals.json'), 'utf8')).toBe('mine')
+  })
+
+  it('updates 0.3.0 files that still match what shipped, using known hashes', () => {
+    fs.mkdirSync(own)
+    fs.writeFileSync(path.join(own, '.seeded.json'), '["a.md"]')
+    fs.writeFileSync(path.join(own, 'a.md'), 'old')
+    fs.writeFileSync(path.join(bundled, 'a.md'), 'new')
+    const old = createHash('sha256').update('old').digest('hex')
+    expect(seedWorkspace(bundled, own, { 'a.md': [old] })).toContain('a.md')
+    expect(fs.readFileSync(path.join(own, 'a.md'), 'utf8')).toBe('new')
   })
 })

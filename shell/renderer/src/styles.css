@@ -33,9 +33,6 @@ input[type='checkbox'] { width: auto; }
 .navbtn.active { background: var(--bg); border-color: var(--line); }
 .navwarn { color: var(--bad); font-weight: 700; }
 .navsep { height: 1px; background: var(--line); margin: 6px 4px; }
-.runlog { margin-top: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
-.runlog summary { padding: 8px 12px; cursor: pointer; color: var(--muted); }
-.runlog .messages { max-height: 360px; padding: 8px 12px; }
 .navfoot { margin-top: auto; color: var(--muted); font-size: 11px; padding: 0 8px; }
 .main { flex: 1; min-width: 0; }
 .pane { height: 100%; overflow: auto; padding: 32px 36px; }
@@ -52,7 +49,12 @@ input[type='checkbox'] { width: auto; }
 .skills { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
 .skillshead { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 0 6px 4px; }
 .skillrow { text-align: left; background: none; border: 0; border-radius: 6px; padding: 5px 6px; color: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 1px; font: inherit; }
-.skillrow:hover { background: var(--panel); }
+.skillrow:hover, .skillrow.active { background: var(--panel); }
+.learn { margin-bottom: 10px; font-size: 12px; }
+.skillview { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.skillviewhead { display: flex; align-items: center; gap: 10px; padding: 14px 28px; border-bottom: 1px solid var(--line); }
+.skillviewhead .grow { flex: 1; }
+.skillviewbody { flex: 1; overflow: auto; padding: 18px 28px; max-width: 820px; }
 .skillrow b { font-size: 12px; font-weight: 600; }
 .skillrow span { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chatrow { display: flex; align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer; }

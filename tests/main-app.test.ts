@@ -6,6 +6,7 @@ import type { ChatRequest, Delta, ModelAdapter } from 'neovai-kernel/cards/agent
 import { createLiveUi } from 'neovai-kernel/cards/live-ui'
 import { createRuntime } from 'neovai-kernel/cards/runtime-agent'
 import { createAgent } from '../shell/main/agent'
+import { runtimeModelOf } from '../shell/main/app-settings'
 
 const bundled = path.resolve(__dirname, '../workspace')
 let tmp = ''
@@ -14,7 +15,7 @@ afterEach(() => { if (tmp) fs.rmSync(tmp, { recursive: true, force: true }) })
 describe('shipped workspace', () => {
   it('has screens and panels that load, and jobs for every run block', () => {
     const ui = createLiveUi({ workspace: bundled })
-    expect(ui.check()).toMatch(/^OK: today, review/)
+    expect(ui.check()).toMatch(/^OK: today, recommendations, review/)
     const runtime = createRuntime({ workspace: bundled, adapter: { async *stream() {} }, settings: () => ({ model: '' }) })
     const jobs = runtime.jobs().map((j) => j.name)
     for (const s of ui.screens()) {
@@ -51,5 +52,28 @@ describe('Codify and the live UI', () => {
     expect(out).toContain('ui/screens/today.json')
     expect(out).toContain('blocks[0]')
     agent.dispose()
+  })
+})
+
+describe('decisions and the runtime model', () => {
+  it('lets the runtime agent read decisions but never change them', async () => {
+    tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'neovai-dec-')))
+    fs.cpSync(bundled, tmp, { recursive: true })
+    createLiveUi({ workspace: tmp }).decide({ ticker: 'XLP', action: 'Buy', date: '2026-11-22' }, 'accepted')
+    const steps: Delta[][] = [
+      [{ type: 'tool_call', index: 0, id: 'a', name: 'write_file', args: JSON.stringify({ path: 'records/data/decisions.json', content: '{}' }) },
+       { type: 'tool_call', index: 1, id: 'b', name: 'save_data', args: JSON.stringify({ name: 'decisions', data: {} }) },
+       { type: 'finish', reason: 'tool_calls' }],
+      [{ type: 'text', text: 'done' }, { type: 'finish', reason: 'stop' }]
+    ]
+    const adapter: ModelAdapter = { async *stream() { for (const d of steps.shift() ?? []) yield d } }
+    const runtime = createRuntime({ workspace: tmp, adapter, settings: () => ({ model: 'm' }), readOnly: ['goals.json', 'records/data/decisions.json'] })
+    await runtime.run('daily')
+    const saved = JSON.parse(fs.readFileSync(path.join(tmp, 'records/data/decisions.json'), 'utf8'))
+    expect(saved.items).toMatchObject([{ ticker: 'XLP', decision: 'accepted' }])
+  })
+  it('runs jobs on the Codify model unless the runtime has its own', () => {
+    expect(runtimeModelOf({ defaultModel: 'opus', runtimeModel: '' })).toBe('opus')
+    expect(runtimeModelOf({ defaultModel: 'opus', runtimeModel: 'flash' })).toBe('flash')
   })
 })

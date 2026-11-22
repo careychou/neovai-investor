@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Chat as ChatRow, SkillInfo } from '../../shared/api'
+import type { Chat as ChatRow, SkillInfo, SkillText } from '../../shared/api'
 import { applyEvent, fromMessages, type Item } from 'neovai-kernel/cards/chat-view'
 import { MessageList } from 'neovai-kernel/cards/chat-view/react'
 import Markdown from './Markdown'
+
+const LEARN = 'Look at the picks I accepted and declined (records/data/decisions.json) and how past picks did (records/data/review.json and the Outcome sections in records/). Tell me what patterns you see in what I take, what I skip, and what worked. Then propose specific changes to the skills, each with the reason and the evidence. Make a change only after I agree.'
 
 /** Where the user tells the agent how the app should behave. */
 export default function Codify() {
@@ -12,6 +14,7 @@ export default function Codify() {
   const [busy, setBusy] = useState<Record<string, boolean>>({})
   const [draft, setDraft] = useState('')
   const [skills, setSkills] = useState<SkillInfo[]>([])
+  const [viewing, setViewing] = useState<SkillText | null>(null)
   const box = useRef<HTMLTextAreaElement>(null)
   const bottom = useRef<HTMLDivElement>(null)
   const busyRef = useRef(busy)
@@ -63,6 +66,11 @@ export default function Codify() {
     refresh()
   }
 
+  const ask = (text: string) => { setDraft(text); setViewing(null); setTimeout(() => box.current?.focus()) }
+  const openSkill = async (name: string) => setViewing(await window.api.readSkill(name))
+  // Reload an open skill when a run changes it.
+  useEffect(() => { if (viewing && !running) window.api.readSkill(viewing.name).then((v) => v && setViewing(v)) }, [running, skills])
+
   const send = async () => {
     const prompt = draft.trim()
     if (!prompt || running) return
@@ -99,14 +107,15 @@ export default function Codify() {
           </div>
         ))}
         <div className="skills">
+          <button className="learn" title="Codify reads your accepted and declined picks and the performance review, then proposes skill changes" onClick={() => ask(LEARN)}>Improve skills from my picks</button>
           <div className="skillshead">Skills</div>
           {skills.length === 0 && <div className="muted small">No skills yet.</div>}
           {skills.map((s) => (
             <button
               key={s.name}
-              className="skillrow"
-              title={`${s.description}\n\nClick to ask for a change to this skill.`}
-              onClick={() => { setDraft(`Change the ${s.name} skill: `); box.current?.focus() }}
+              className={viewing?.name === s.name ? 'skillrow active' : 'skillrow'}
+              title={`${s.description}\n\nClick to read it.`}
+              onClick={() => openSkill(s.name)}
             >
               <b>{s.name}</b>
               <span>{s.description}</span>
@@ -115,7 +124,18 @@ export default function Codify() {
         </div>
       </aside>
       <section className="thread">
-        <div className="messages">
+        {viewing && (
+          <div className="skillview">
+            <div className="skillviewhead">
+              <b>{viewing.name}</b><span className="muted small">{viewing.path}</span>
+              <span className="grow" />
+              <button className="primary" onClick={() => ask(`Change the ${viewing.name} skill: `)}>Ask for a change</button>
+              <button onClick={() => setViewing(null)}>Close</button>
+            </div>
+            <div className="skillviewbody"><Markdown text={viewing.text.replace(/^---[\s\S]*?\n---\n/, '')} /></div>
+          </div>
+        )}
+        <div className="messages" hidden={!!viewing}>
           {list.length === 0 && (
             <p className="muted empty">Say how the app should look or behave. Codify changes the screens, jobs, skills and code in the workspace, and the change shows at once.</p>
           )}

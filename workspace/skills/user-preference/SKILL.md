@@ -24,6 +24,10 @@ These come from `goals.json`. Read the file each time. You cannot edit it; the u
 - No options, no margin, no penny stocks.
 - At most 20 percent of the budget in one position.
 
+## Learned from decisions
+
+`records/data/decisions.json` lists the calls the user accepted or declined (written by the app, read-only to you). Before recommending, read it and lean toward the kinds of calls the user takes. Do not repeat a call the user declined in the last five days unless something material changed, and say what changed.
+
 ## When the user states a new preference
 
 - Update the Style section of this file and tell the user which line changed.

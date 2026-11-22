@@ -9,7 +9,7 @@ Not financial advice. The app never places trades or logs in to a brokerage.
 
 ## Status
 
-Version 0.3.0. The app has two halves:
+Version 0.4.0. The app has two halves:
 
 - **Main App**: one tab per screen in `workspace/ui/screens/*.json`. A screen is a
   list of built-in blocks (metrics, tables, alerts, recommendations, run buttons,
@@ -19,10 +19,17 @@ Version 0.3.0. The app has two halves:
 - **Run buttons** start jobs (`workspace/jobs/*.md`) on a runtime agent. Each run
   reads the instructions, every skill in order and the job, fresh from disk, so an
   edit applies to the next run without a rebuild. That agent may write only in
-  `workspace/records/`.
+  `workspace/records/`. While it runs, the button shows the elapsed time and the
+  step it is on, with its thoughts and tool calls below. It uses the Codify model
+  unless Settings picks a separate runtime model.
+- **Recommendations**: Accept or Decline each call. Choices are saved in
+  `workspace/records/data/decisions.json`, which only the app writes. The review
+  job scores accepted against declined calls, and the next daily run reads them.
 - **Codify**: the coding agent. Tell it how the app should look or behave; it edits
   screens, panels, jobs, skills and logic, checks its UI edits with `check_ui`, and
-  the change shows at once.
+  the change shows at once. Click a skill to read it in full. "Improve skills from
+  my picks" asks Codify to study your decisions and the review results and propose
+  skill changes, which it makes only after you agree.
 
 See `docs/design.md`.
 
@@ -40,7 +47,7 @@ tag in `kernel.json`.
 
 ```sh
 git clone https://github.com/careychou/neovai-kernel ../neovai-kernel
-git -C ../neovai-kernel checkout v0.3.0
+git -C ../neovai-kernel checkout v0.4.0
 npm install
 npm run build && npx electron .
 ```
@@ -60,9 +67,10 @@ meant for the machine that built it.
 
 The installed app works on its own copy of `workspace/`, made on first launch
 at `~/Library/Application Support/Neovai Investor/workspace`. Reinstalling does
-not replace that copy; an update only adds files and folders the app has never
-shipped before (tracked in `.seeded.json`), so nothing you or Codify changed or
-deleted is overwritten or brought back. Screens, panels, jobs and skills in that
+not replace that copy. An update adds files and folders the app has never
+shipped before, and replaces a shipped file only when it still matches what was
+shipped (hashes in `.seeded.json`). Nothing you or Codify changed or deleted is
+overwritten or brought back. Screens, panels, jobs and skills in that
 copy apply live.
 
 ## Check

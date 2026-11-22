@@ -1,13 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ScreenView, type ScreenHost } from 'neovai-kernel/cards/live-ui/react'
 import { MessageList } from 'neovai-kernel/cards/chat-view/react'
-import { applyEvent, type Item } from 'neovai-kernel/cards/chat-view'
+import { applyEvent, peek, toolLabel, type Item } from 'neovai-kernel/cards/chat-view'
 import type { AppInfo, Goals, MainState } from '../../shared/api'
 import Codify from './Codify'
 import Markdown from './Markdown'
 import Settings from './Settings'
 
-const EMPTY: MainState = { screens: [], data: {}, jobs: [], running: [], reports: {} }
+const EMPTY: MainState = { screens: [], data: {}, jobs: [], running: [], started: {}, reports: {} }
+
+/** One line on what a run is doing now, from its latest activity. */
+function stepOf(items: Item[] = []): string {
+  for (let i = items.length - 1; i >= 0; i--) {
+    const it = items[i]
+    if (it.kind === 'tool') return it.ok === undefined ? toolLabel(it) : `done: ${toolLabel(it)}`
+    if (it.kind === 'reasoning') return it.live ? `Thinking: ${peek(it.text, 70)}` : peek(it.text, 70)
+    if (it.kind === 'assistant') return 'Writing the report'
+    if (it.kind === 'error') return it.text
+  }
+  return 'Starting'
+}
 
 export default function App() {
   const [tab, setTab] = useState('')
@@ -41,6 +53,10 @@ export default function App() {
   const host: ScreenHost = useMemo(() => ({
     data: main.data,
     running: main.running,
+    runStarted: main.started,
+    runStep: Object.fromEntries(main.running.map((j) => [j, stepOf(runs[j])])),
+    renderActivity: (job) => <MessageList items={runs[job] ?? []} Markdown={Markdown} />,
+    decide: (rec, decision) => { void window.api.decide(rec, decision) },
     reports: main.reports,
     panelProps: { goals },
     Markdown,
@@ -53,10 +69,8 @@ export default function App() {
       if (!r.ok) setRunError(r.error ?? 'The run did not start.')
     },
     stopJob: (job) => { void window.api.stopJob(job) }
-  }), [main, goals])
+  }), [main, goals, runs])
 
-  // What the runtime agent is doing now, for the jobs this screen can run.
-  const live = screen ? main.running.filter((j) => JSON.stringify(screen.screen ?? {}).includes(`"job":"${j}"`)) : []
 
   return (
     <div className="app">
@@ -80,12 +94,6 @@ export default function App() {
           <div className="pane">
             {runError && <div className="error">{runError}</div>}
             <ScreenView screen={screen.screen} errors={screen.errors} host={host} tick={tick} />
-            {live.map((j) => (
-              <details key={j} className="runlog" open>
-                <summary>Working on {main.jobs.find((x) => x.name === j)?.title ?? j}…</summary>
-                <div className="messages"><MessageList items={runs[j] ?? []} Markdown={Markdown} /></div>
-              </details>
-            ))}
           </div>
         )}
         <div className="pane chatpane" hidden={current !== 'codify'}><Codify /></div>

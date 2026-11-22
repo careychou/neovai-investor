@@ -26,7 +26,8 @@
         {
           "type": "recommendations",
           "title": "Recommendations",
-          "data": "today.picks"
+          "data": "today.picks",
+          "decide": true
         },
         {
           "type": "alerts",

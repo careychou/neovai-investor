@@ -11,7 +11,7 @@ Before you finish, call save_data with the name "review" and this shape:
   "date": "YYYY-MM-DD",
   "summary": "two to four sentences in markdown",
   "metrics": [{ "label": "Hit rate", "value": "4 of 6" }],
-  "outcomes": [{ "date": "YYYY-MM-DD", "ticker": "ABC", "action": "Buy", "entry": 0, "now": 0, "result": "+3.1%", "status": "open | target hit | stopped out" }]
+  "outcomes": [{ "date": "YYYY-MM-DD", "ticker": "ABC", "action": "Buy", "decision": "accepted | declined | none", "entry": 0, "now": 0, "result": "+3.1%", "status": "open | target hit | stopped out" }]
 }
 ```
 
