@@ -1,18 +1,18 @@
 {
-  "title": "Today",
+  "title": "Market Scan",
   "order": 1,
   "skills": [
     "market-scan"
   ],
   "blocks": [
     {
-      "type": "heading",
-      "text": "Today \u00b7 Market scan"
-    },
-    {
       "type": "run",
       "job": "scan",
       "label": "Run market scan"
+    },
+    {
+      "type": "panel",
+      "file": "ui/SymbolChart.tsx"
     },
     {
       "type": "panel",
@@ -45,6 +45,27 @@
             "note"
           ]
         }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "News on my holdings"
+    },
+    {
+      "type": "markdown",
+      "data": "market.holdingsNote"
+    },
+    {
+      "type": "table",
+      "title": "Holdings news",
+      "data": "market.holdingsNews",
+      "columns": [
+        "ticker",
+        "headline",
+        "source",
+        "time",
+        "impact",
+        "action"
       ]
     },
     {

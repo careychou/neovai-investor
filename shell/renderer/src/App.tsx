@@ -66,6 +66,7 @@ export default function App() {
     savePrefs: async (p) => { await window.api.saveGoals(p as Goals); loadGoals() },
     Markdown,
     loadPanel: (file) => window.api.loadPanel(file),
+    fetch: (url) => window.api.panelFetch(url),
     onPanelError: (file, message) => { void window.api.reportPanelError(file, message) },
     runJob: async (job, input) => {
       setRunError('')

@@ -12,5 +12,6 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["shell", "workspace", "tests", "electron.vite.config.ts", "vitest.config.ts"]
+  "include": ["shell", "workspace", "tests", "electron.vite.config.ts", "vitest.config.ts"],
+  "exclude": ["workspace/ui"]
 }

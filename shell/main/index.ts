@@ -7,7 +7,7 @@ import { ProviderRouter } from 'neovai-kernel/cards/model-providers'
 import { createSettings, type SecretBox } from 'neovai-kernel/cards/settings'
 import { webFetch } from 'neovai-kernel/cards/web-fetch'
 import { createRuntime, type Runtime } from 'neovai-kernel/cards/runtime-agent'
-import { createLiveUi, DEFAULT_EXTERNALS, type LiveUi, type Screen } from 'neovai-kernel/cards/live-ui'
+import { createLiveUi, DEFAULT_EXTERNALS, panelFetch, type LiveUi, type Screen } from 'neovai-kernel/cards/live-ui'
 import { createAgent, type Agent } from './agent'
 import { loadGoals, saveGoals } from './goals'
 import { seedWorkspace } from './seed'
@@ -159,7 +159,8 @@ app.whenReady().then(() => {
     },
     stopJob: async (job) => runtime.stop(job),
     loadPanel: async (file) => ui.panel(file),
-    reportPanelError: async (file, message) => ui.reportError(file, message)
+    reportPanelError: async (file, message) => ui.reportError(file, message),
+    panelFetch: async (url) => panelFetch(url)
   }
   for (const c of CHANNELS) ipcMain.handle(c, (_e, ...args: unknown[]) => (handlers[c] as (...a: unknown[]) => unknown)(...args))
 

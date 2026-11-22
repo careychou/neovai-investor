@@ -9,7 +9,7 @@ Not financial advice. The app never places trades or logs in to a brokerage.
 
 ## Status
 
-Version 0.8.0. The app has two halves:
+Version 0.9.0. New in 0.9.0: panels can draw trading-style charts (`chart` block or `<Chart>`: candlesticks, line, area, bars, volume, last-price tag, hover O/H/L/C), fetch live data through the main process (`useFetch`, `fetchJson`), import plain `.css` files and split into many files; Market Scan ships a live symbol chart (`ui/SymbolChart.tsx`) that Codify built. The app has two halves:
 
 - **Main App**: one tab per skill, each with its own job: Preferences
   (user-preference, first tab: the user's budget, limits and trading rules, saved to
@@ -49,6 +49,19 @@ Version 0.8.0. The app has two halves:
 
 See `docs/design.md`.
 
+## Start a new app from this template
+
+1. Copy this repo (and keep `neovai-kernel` next to it, checked out at the tag in `kernel.json`).
+2. Rename it: `name`, `description`, `build.appId`, `build.productName` and `artifactName` in
+   `package.json`; the window title in `shell/main/index.ts`, `shell/renderer/index.html` and the
+   brand in `shell/renderer/src/App.tsx`; the app description at the top of Codify's `BASE_PROMPT`
+   in `shell/main/agent.ts`.
+3. Choose kernel cards: edit the imports in `shell/main` and the `CARDS` list; drop the ones the
+   app does not need.
+4. Replace `workspace/`: your own `instructions/system.md`, `skills/<name>/SKILL.md`, `jobs/*.md`,
+   `ui/screens/*.json` (one screen per skill) and panels, and `goals.json` (the preferences shape).
+5. `npm install`, `npm run dev`, then let Codify grow the screens and skills from inside the app.
+
 ## Layout
 
 - `shell/` — the fixed Electron and React shell. The agent cannot edit it.
@@ -63,7 +76,7 @@ tag in `kernel.json`.
 
 ```sh
 git clone https://github.com/careychou/neovai-kernel ../neovai-kernel
-git -C ../neovai-kernel checkout v0.8.0
+git -C ../neovai-kernel checkout v0.9.0
 npm install
 npm run build && npx electron .
 ```

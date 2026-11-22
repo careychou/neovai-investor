@@ -64,6 +64,8 @@ export interface Api {
   stopJob(job: string): Promise<void>
   loadPanel(file: string): Promise<PanelResult>
   reportPanelError(file: string, message: string): Promise<void>
+  /** GET a URL for a code panel (prices, news feeds…), from the main process. Never throws. */
+  panelFetch(url: string): Promise<{ ok: boolean; status: number; text: string; error?: string }>
   /** Returns a function that stops listening. */
   onEvent(fn: (chatId: string, e: AgentEvent) => void): () => void
   /** Events of runtime-agent runs. */
@@ -78,7 +80,7 @@ export const PANEL_LIBRARIES = ['recharts', 'lucide-react', 'date-fns'] as const
 export const CHANNELS = [
   'info', 'secretsEncrypted', 'getSettings', 'saveSettings', 'listModels', 'getGoals', 'saveGoals',
   'listChats', 'newChat', 'openChat', 'deleteChat', 'send', 'stop', 'listSkills', 'readSkill', 'decide',
-  'mainState', 'runJob', 'stopJob', 'loadPanel', 'reportPanelError'
+  'mainState', 'runJob', 'stopJob', 'loadPanel', 'reportPanelError', 'panelFetch'
 ] as const
 export const EVENT_CHANNEL = 'agent-event'
 export const RUN_EVENT_CHANNEL = 'run-event'
