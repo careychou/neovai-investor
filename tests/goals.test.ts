@@ -7,9 +7,11 @@ import { cleanGoals, loadGoals, saveGoals, DEFAULT_GOALS } from '../shell/main/g
 describe('goals', () => {
   it('keeps valid numbers and replaces bad ones with the defaults', () => {
     expect(cleanGoals({ earningCapPct: '20', lossLimitPct: -3, budget: 'abc', extra: 1 }))
-      .toEqual({ earningCapPct: 20, lossLimitPct: DEFAULT_GOALS.lossLimitPct, budget: DEFAULT_GOALS.budget })
+      .toEqual({ earningCapPct: 20, lossLimitPct: DEFAULT_GOALS.lossLimitPct, budget: DEFAULT_GOALS.budget, extra: 1 })
     expect(cleanGoals({ lossLimitPct: 150 }).lossLimitPct).toBe(DEFAULT_GOALS.lossLimitPct)
     expect(cleanGoals(null)).toEqual(DEFAULT_GOALS)
+    expect(cleanGoals({ maxShares: 1000, rules: ['sell at +20%'] })).toMatchObject({ maxShares: 1000, rules: ['sell at +20%'], budget: DEFAULT_GOALS.budget })
+    expect(() => cleanGoals({ big: 'x'.repeat(70_000) })).toThrow('too large')
   })
 
   it('saves and reloads, and falls back to defaults when the file is missing or broken', () => {

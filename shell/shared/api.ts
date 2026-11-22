@@ -12,7 +12,8 @@ export interface SkillInfo { name: string; description: string }
 
 export interface SkillText { name: string; path: string; text: string }
 
-export interface Goals { earningCapPct: number; lossLimitPct: number; budget: number }
+/** The user's preferences (goals.json): any fields the Preferences screen sets. */
+export interface Goals { earningCapPct?: number; lossLimitPct?: number; budget?: number; [key: string]: unknown }
 
 export interface AppInfo { version: string; kernel: string; workspace: string }
 

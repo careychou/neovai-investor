@@ -62,6 +62,8 @@ export default function App() {
     skillText: main.skills,
     codify: (req) => { setCodifyReq({ ...req, at: Date.now() }); setTab('codify') },
     panelProps: { goals },
+    prefs: goals ?? {},
+    savePrefs: async (p) => { await window.api.saveGoals(p as Goals); loadGoals() },
     Markdown,
     loadPanel: (file) => window.api.loadPanel(file),
     onPanelError: (file, message) => { void window.api.reportPanelError(file, message) },
@@ -72,7 +74,7 @@ export default function App() {
       if (!r.ok) setRunError(r.error ?? 'The run did not start.')
     },
     stopJob: (job) => { void window.api.stopJob(job) }
-  }), [main, goals, runs])
+  }), [main, goals, runs, loadGoals])
 
 
   return (
@@ -100,7 +102,7 @@ export default function App() {
           </div>
         )}
         <div className="pane chatpane" hidden={current !== 'codify'}><Codify request={codifyReq} screens={screens} /></div>
-        {current === 'settings' && <div className="pane"><Settings info={info} onGoalsSaved={loadGoals} /></div>}
+        {current === 'settings' && <div className="pane"><Settings info={info} /></div>}
       </main>
     </div>
   )

@@ -92,6 +92,7 @@ app.whenReady().then(() => {
     }),
     // Accept and decline are the user's; the agent reads them to learn but never rewrites them.
     readOnly: ['goals.json', 'records/data/decisions.json'],
+    goalsTitle: 'Preferences (set by the user on the Preferences screen)',
     tools: [webFetch],
     onEvent: (_runId, job, e) => win?.webContents.send(RUN_EVENT_CHANNEL, job, e)
   })

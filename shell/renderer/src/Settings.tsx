@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AppInfo, Goals, ModelGroup, AppSettings as S } from '../../shared/api'
+import type { AppInfo, ModelGroup, AppSettings as S } from '../../shared/api'
 
 type Provider = S['providers'][number]
 const KINDS: { id: Provider['kind']; label: string }[] = [
@@ -13,10 +13,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <label className="field"><span>{label}</span>{children}</label>
 }
 
-export default function Settings({ info, onGoalsSaved }: { info: AppInfo | null; onGoalsSaved: () => void }) {
+export default function Settings({ info }: { info: AppInfo | null }) {
   const [s, setS] = useState<S | null>(null)
   const [groups, setGroups] = useState<ModelGroup[]>([])
-  const [goals, setGoals] = useState<Goals | null>(null)
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
   const [encrypted, setEncrypted] = useState<boolean | null>(null)
@@ -30,11 +29,10 @@ export default function Settings({ info, onGoalsSaved }: { info: AppInfo | null;
   const askEncrypted = () => { if (encrypted === null) window.api.secretsEncrypted().then(setEncrypted).catch(() => {}) }
   useEffect(() => {
     window.api.getSettings().then(setS)
-    window.api.getGoals().then(setGoals)
     loadModels()
   }, [])
 
-  if (!s || !goals) return <div className="settings"><p className="muted">Loading…</p></div>
+  if (!s) return <div className="settings"><p className="muted">Loading…</p></div>
 
   const patch = (i: number, p: Partial<Provider>) =>
     setS({ ...s, providers: s.providers.map((x, j) => (j === i ? { ...x, ...p } : x)) })
@@ -46,10 +44,7 @@ export default function Settings({ info, onGoalsSaved }: { info: AppInfo | null;
     setNote('Saving…')
     try {
       await window.api.saveSettings(s)
-      await window.api.saveGoals(goals)
       setS(await window.api.getSettings())
-      setGoals(await window.api.getGoals())
-      onGoalsSaved()
       await loadModels()
       setNote('Saved.')
     } catch (e) {
@@ -68,19 +63,13 @@ export default function Settings({ info, onGoalsSaved }: { info: AppInfo | null;
       ))}
     </>
   )
+
   const num = (v: string) => (v === '' ? 0 : Number(v))
 
   return (
     <div className="settings">
       <h1>Settings</h1>
 
-      <h2>Goals</h2>
-      <p className="muted small">The agent reads these but cannot change them.</p>
-      <div className="row">
-        <Field label="Take profit at (+%)"><input type="number" min="0" value={goals.earningCapPct} onChange={(e) => setGoals({ ...goals, earningCapPct: num(e.target.value) })} /></Field>
-        <Field label="Exit at a loss of (-%)"><input type="number" min="0" value={goals.lossLimitPct} onChange={(e) => setGoals({ ...goals, lossLimitPct: num(e.target.value) })} /></Field>
-        <Field label="Budget ($)"><input type="number" min="0" value={goals.budget} onChange={(e) => setGoals({ ...goals, budget: num(e.target.value) })} /></Field>
-      </div>
 
       <h2>Model providers</h2>
       {encrypted === false && <p className="error">This computer cannot encrypt saved keys, so they are stored as plain text.</p>}

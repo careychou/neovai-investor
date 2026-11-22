@@ -9,12 +9,14 @@ Not financial advice. The app never places trades or logs in to a brokerage.
 
 ## Status
 
-Version 0.7.0. The app has two halves:
+Version 0.8.0. The app has two halves:
 
-- **Main App**: one tab per skill, each with its own job: Today (market-scan),
+- **Main App**: one tab per skill, each with its own job: Preferences
+  (user-preference, first tab: the user's budget, limits and trading rules, saved to
+  `goals.json`; Settings no longer has a Goals form), Market Scan (market-scan),
   Candidates (candidate-evaluation), Recommendations (recommendation: new stocks,
-  sells and changes, with Refresh), Performance (performance-review: outcomes and
-  open positions) and Preferences (user-preference). Each tab has "Change this
+  sells and changes, with Refresh) and Performance (performance-review: outcomes and
+  open positions). Each tab has "Change this
   screen" and a button per skill it is built on, which open Codify on it.
   A tab is a screen in `workspace/ui/screens/*.json`. A screen is a
   list of built-in blocks (metrics, tables, alerts, recommendations, run buttons,
@@ -23,7 +25,8 @@ Version 0.7.0. The app has two halves:
   while the app runs. A broken file keeps showing its last working version.
   Panels are interactive: from `@neovai/panel` they can start jobs with options
   (`run(job, {mode: ...})`), stop them and follow their progress, Accept or Decline
-  calls, keep their own choices across restarts (`usePanelState`), draw any
+  calls, read and save the user's preferences (`prefs`, `savePrefs`), keep their
+  own choices across restarts (`usePanelState`), draw any
   built-in block inside themselves, and open Codify. They may also import
   `recharts`, `lucide-react` and `date-fns`. A `run` block can carry options too
   (`"input": {...}`); the runtime agent gets them with the run.
@@ -50,7 +53,7 @@ See `docs/design.md`.
 
 - `shell/` — the fixed Electron and React shell. The agent cannot edit it.
 - `workspace/` — the only folder the agent edits: `instructions/`, `skills/`,
-  `jobs/`, `records/`, `logic/`, `ui/` (screens and panels), `tests/`. `goals.json` is read-only to the agent; change it in Settings.
+  `jobs/`, `records/`, `logic/`, `ui/` (screens and panels), `tests/`. `goals.json` holds the user's preferences: read-only to the agents, changed on the Preferences screen.
 - `kernel.json` — the kernel tag this app is built against.
 
 ## Run
@@ -60,7 +63,7 @@ tag in `kernel.json`.
 
 ```sh
 git clone https://github.com/careychou/neovai-kernel ../neovai-kernel
-git -C ../neovai-kernel checkout v0.7.0
+git -C ../neovai-kernel checkout v0.8.0
 npm install
 npm run build && npx electron .
 ```

@@ -12,9 +12,9 @@ export default function Preferences({ goals, data }: { goals: Goals | null; data
     <div className="lu-block">
       <h3 className="lu-title">Hard limits and choices</h3>
       <div className="lu-metrics">
-        {goals && card('Take profit at', `+${goals.earningCapPct}%`, 'change in Settings')}
-        {goals && card('Exit at a loss of', `-${goals.lossLimitPct}%`, 'change in Settings')}
-        {goals && card('Budget', `$${goals.budget.toLocaleString()}`, 'change in Settings')}
+        {goals && card('Take profit at', `+${goals.earningCapPct}%`, 'set on this screen')}
+        {goals && card('Exit at a loss of', `-${goals.lossLimitPct}%`, 'set on this screen')}
+        {goals && card('Budget', `$${goals.budget.toLocaleString()}`, 'set on this screen')}
         {card('Accepted', String(count('accepted')), 'calls you took')}
         {card('Declined', String(count('declined')), 'calls you skipped')}
       </div>

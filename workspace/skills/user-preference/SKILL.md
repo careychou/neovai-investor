@@ -8,7 +8,7 @@ Read this before any other skill. Every later step must stay inside these rules.
 
 ## Hard limits
 
-These come from `goals.json`. Read the file each time. You cannot edit it; the user changes these numbers in Settings.
+These come from `goals.json`. Read the file each time. You cannot edit it; the user changes them on the Preferences screen.
 
 - `earningCapPct`: take the gain when a position is up this much.
 - `lossLimitPct`: the largest loss allowed on a position.
@@ -31,5 +31,5 @@ These come from `goals.json`. Read the file each time. You cannot edit it; the u
 ## When the user states a new preference
 
 - Update the Style section of this file and tell the user which line changed.
-- If the request changes a hard limit, do not edit anything. Tell the user to change it in Settings.
+- If the request changes a hard limit, do not edit anything. Tell the user to change it on the Preferences screen.
 - If a new preference conflicts with a hard limit, the hard limit wins. Say so.

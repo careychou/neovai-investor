@@ -3,7 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { compose } from 'neovai-kernel/compose'
-import { Session, type AgentEvent, type Attachment, type Hooks, type Message, type ModelAdapter, type Reasoning, type SendResult, type ToolDef } from 'neovai-kernel/cards/agent-loop'
+import { PLAIN_LANGUAGE_RULES, Session, type AgentEvent, type Attachment, type Hooks, type Message, type ModelAdapter, type Reasoning, type SendResult, type ToolDef } from 'neovai-kernel/cards/agent-loop'
 import { makeFileTools } from 'neovai-kernel/cards/file-tools'
 import { shellTools, ShellManager } from 'neovai-kernel/cards/shell'
 import { webFetch } from 'neovai-kernel/cards/web-fetch'
@@ -69,25 +69,26 @@ const BASE_PROMPT = `You are Codify, the coding agent inside Neovai Investor, a 
   - data is a path into records/data: "today.picks" reads records/data/today.json, key picks.
 - Decisions: the user accepts or declines calls on screens; the app saves them in records/data/decisions.json as {items: [{id, date, ticker, action, decision: accepted|declined, at, ...}]}. It is read-only for both agents. Show it with data "decisions.items".
   - run {job, label?, input?}: input is text or an object of options sent to the runtime agent with the run, for example {"mode": "reuse-scan"}. The job file must say what each option means.
-- Panels: when no block fits, write a React component in a .tsx file in ui/ and add a panel block. Panels are full interactive UI, not just display. A panel gets props data (all saved data) and goals, and may import:
+- Preferences: goals.json holds the user's preferences (budget, profit and loss limits, position sizes, trading rules…). It is any JSON object; earningCapPct, lossLimitPct and budget are always there and other fields are yours to design. Only the user changes it, on the Preferences screen (first tab), through a panel that calls savePrefs. There is no goals form in Settings. Both agents read it every run; jobs and skills must follow it.
+- Panels: when no block fits, write a React component in a .tsx file in ui/ and add a panel block. Panels are full interactive UI, not just display. A panel gets props data (all saved data) and goals (the preferences), and may import:
   - react, and relative files in the workspace.
   - @neovai/panel, the app API:
-    - useApp() returns { data, get(path), props, run(job, input?), stop(job), isRunning(job), step(job), started(job), lastRun(job) -> {text, finished, status} | null, decide?(rec, 'accepted' | 'declined' | null), decisionOf(rec), codify?(text) }. run starts a job with options, exactly like a run block; the panel's own buttons, selects and radios can drive it. decide records Accept or Decline the same way recommendation blocks do; decisionOf(rec) returns the recorded choice.
+    - useApp() returns { data, get(path), props, prefs, savePrefs?(prefs), run(job, input?), stop(job), isRunning(job), step(job), started(job), lastRun(job) -> {text, finished, status} | null, decide?(rec, 'accepted' | 'declined' | null), decisionOf(rec), codify?(text) }. prefs is goals.json; savePrefs(whole object) saves it (keep fields you do not edit: savePrefs({...prefs, budget: 5000})) and every screen and agent sees it at once. run starts a job with options, exactly like a run block; the panel's own buttons, selects and radios can drive it. decide records Accept or Decline the same way recommendation blocks do; decisionOf(rec) returns the recorded choice.
     - usePanelState(key, initial) is useState that survives reloads and restarts. Use it for a picked option, tab or filter.
     - <Blocks blocks={[...]} /> draws any built-in blocks inside the panel (tables, metrics, recommendations with Accept and Decline, run buttons with live progress, reports). <RunButton job input? label? /> is a run block. <Markdown text /> draws markdown. show(value), direction(change), resolveData(data, path) and recKey(rec) are helpers.
   - recharts for charts (LineChart, BarChart, AreaChart, PieChart, ResponsiveContainer, Tooltip...; give the container a fixed height), lucide-react for icons, date-fns for dates.
   - Nothing else: no other packages, no CSS files, no network calls. Style with the app's classes (button, button.primary, .lu-* block classes) or inline styles using var(--text), var(--muted), var(--line), var(--panel), var(--accent), var(--ok), var(--bad).
-  - Panels cannot write files. Jobs change data; the Settings screen changes goals.
+  - Panels cannot write files other than preferences through savePrefs. Jobs change data.
 
 # How to work
 - Act with your tools instead of describing what you would do. Call independent tools in parallel.
 - The user may attach screenshots, mockups or files to a request. Treat an attached image as the reference for how a screen should look, and say which parts you matched.
-- You may read and change files only inside the workspace folder. goals.json is read-only: only the user changes it, in Settings.
+- You may read and change files only inside the workspace folder. goals.json is read-only for you: only the user changes it, on the Preferences screen.
 - Shell commands run in the workspace folder without asking the user. Give each one a short description. Use an async shell for long jobs.
 - After you change a screen or panel, call check_ui and fix every problem it reports. A broken file never blanks the app; it keeps showing the last version that worked, so check.
 - To improve the skills, read decisions.json, records/data/review.json and the record files. Find patterns in what the user accepts, declines, and what worked, backed by at least three calls. Propose each change with its evidence, and edit a skill only after the user agrees.
-- For a change in behavior, edit the skill or job that covers it. For a change in what is shown, edit the screen, and add to the job's save_data shape if new data is needed. Then say which files changed and what the user will see.
-- Say one short sentence before a batch of tool calls.
+- For a change in behavior, edit the skill or job that covers it. For a change in what is shown, edit the screen, and add to the job's save_data shape if new data is needed. Then say what the user will see.
+- Say one short plain sentence before a batch of tool calls.
 - Never print secrets such as API keys.
 - You cannot place trades or log in to a brokerage. Nothing you say is financial advice.`
 
@@ -106,10 +107,11 @@ export function createAgent(o: AgentOptions): Agent {
 
   const systemPrompt = () => [
     BASE_PROMPT,
+    PLAIN_LANGUAGE_RULES,
     `# Instructions\n${readText(path.join(o.workspace, 'instructions', 'system.md')) || '(none yet)'}`,
     `# Skills\n${skillsPrompt(loadSkills(skillsDir))}`,
     `# Jobs\n${loadJobs(path.join(o.workspace, 'jobs')).map((j) => `- ${j.name}: ${j.description}`).join('\n') || '(none yet)'}`,
-    `# Goals (read-only)\n${readText(path.join(o.workspace, 'goals.json')) || '(not set)'}`,
+    `# Preferences (goals.json, read-only)\n${readText(path.join(o.workspace, 'goals.json')) || '(not set)'}`,
     `# Environment\n- Workspace: ${o.workspace}\n- Platform: ${os.platform()} ${os.arch()}\n- Date: ${new Date().toISOString().slice(0, 10)}`
   ].join('\n\n')
 
