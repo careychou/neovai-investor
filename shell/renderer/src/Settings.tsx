@@ -1,0 +1,142 @@
+import { useEffect, useState } from 'react'
+import type { AppInfo, Goals, ModelGroup, Settings as S } from '../../shared/api'
+
+type Provider = S['providers'][number]
+const KINDS: { id: Provider['kind']; label: string }[] = [
+  { id: 'openai', label: 'OpenAI-compatible' },
+  { id: 'azure', label: 'Azure OpenAI' },
+  { id: 'vertex', label: 'Google Vertex AI' }
+]
+const lines = (v: string) => v.split('\n').map((x) => x.trim()).filter(Boolean)
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="field"><span>{label}</span>{children}</label>
+}
+
+export default function Settings({ info, onGoalsSaved }: { info: AppInfo | null; onGoalsSaved: () => void }) {
+  const [s, setS] = useState<S | null>(null)
+  const [groups, setGroups] = useState<ModelGroup[]>([])
+  const [goals, setGoals] = useState<Goals | null>(null)
+  const [note, setNote] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const loadModels = async () => {
+    setLoading(true)
+    try { setGroups(await window.api.listModels()) } catch { setGroups([]) }
+    setLoading(false)
+  }
+  useEffect(() => {
+    window.api.getSettings().then(setS)
+    window.api.getGoals().then(setGoals)
+    loadModels()
+  }, [])
+
+  if (!s || !goals) return <div className="settings"><p className="muted">Loading…</p></div>
+
+  const patch = (i: number, p: Partial<Provider>) =>
+    setS({ ...s, providers: s.providers.map((x, j) => (j === i ? { ...x, ...p } : x)) })
+  const add = () =>
+    setS({ ...s, providers: [...s.providers, { id: `p${Date.now().toString(36)}`, name: 'New provider', kind: 'openai', baseUrl: '', apiKey: '' }] })
+  const remove = (i: number) => setS({ ...s, providers: s.providers.filter((_, j) => j !== i) })
+
+  const save = async () => {
+    setNote('Saving…')
+    try {
+      await window.api.saveSettings(s)
+      await window.api.saveGoals(goals)
+      setS(await window.api.getSettings())
+      setGoals(await window.api.getGoals())
+      onGoalsSaved()
+      await loadModels()
+      setNote('Saved.')
+    } catch (e) {
+      setNote(`Could not save: ${String((e as Error)?.message ?? e)}`)
+    }
+  }
+
+  const known = groups.flatMap((g) => g.models)
+  const num = (v: string) => (v === '' ? 0 : Number(v))
+
+  return (
+    <div className="settings">
+      <h1>Settings</h1>
+
+      <h2>Goals</h2>
+      <p className="muted small">The agent reads these but cannot change them.</p>
+      <div className="row">
+        <Field label="Take profit at (+%)"><input type="number" min="0" value={goals.earningCapPct} onChange={(e) => setGoals({ ...goals, earningCapPct: num(e.target.value) })} /></Field>
+        <Field label="Exit at a loss of (-%)"><input type="number" min="0" value={goals.lossLimitPct} onChange={(e) => setGoals({ ...goals, lossLimitPct: num(e.target.value) })} /></Field>
+        <Field label="Budget ($)"><input type="number" min="0" value={goals.budget} onChange={(e) => setGoals({ ...goals, budget: num(e.target.value) })} /></Field>
+      </div>
+
+      <h2>Model providers</h2>
+      {info && !info.secretsEncrypted && <p className="error">This computer cannot encrypt saved keys, so they are stored as plain text.</p>}
+      {s.providers.map((p, i) => (
+        <div key={p.id} className="provider">
+          <div className="row">
+            <Field label="Name"><input value={p.name} onChange={(e) => patch(i, { name: e.target.value })} /></Field>
+            <Field label="Type">
+              <select value={p.kind} onChange={(e) => patch(i, { kind: e.target.value as Provider['kind'] })}>
+                {KINDS.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}
+              </select>
+            </Field>
+            <label className="check"><input type="checkbox" checked={p.enabled !== false} onChange={(e) => patch(i, { enabled: e.target.checked })} /> Enabled</label>
+            <button className="x" title="Remove provider" onClick={() => remove(i)}>×</button>
+          </div>
+          {p.kind !== 'vertex' && (
+            <div className="row">
+              <Field label={p.kind === 'azure' ? 'Resource URL' : 'Base URL'}><input value={p.baseUrl} placeholder={p.kind === 'azure' ? 'https://<resource>.openai.azure.com' : 'http://localhost:4000/v1'} onChange={(e) => patch(i, { baseUrl: e.target.value })} /></Field>
+              <Field label="API key"><input type="password" value={p.apiKey} onChange={(e) => patch(i, { apiKey: e.target.value })} /></Field>
+            </div>
+          )}
+          {p.kind === 'azure' && (
+            <div className="row">
+              <Field label="API version"><input value={p.apiVersion ?? ''} onChange={(e) => patch(i, { apiVersion: e.target.value })} /></Field>
+              <Field label="Deployments (one per line)"><textarea rows={2} value={(p.deployments ?? []).join('\n')} onChange={(e) => patch(i, { deployments: lines(e.target.value) })} /></Field>
+            </div>
+          )}
+          {p.kind === 'vertex' && (
+            <>
+              <div className="row">
+                <Field label="Project"><input value={p.project ?? ''} onChange={(e) => patch(i, { project: e.target.value })} /></Field>
+                <Field label="Location"><input value={p.location ?? ''} placeholder="global" onChange={(e) => patch(i, { location: e.target.value })} /></Field>
+                <Field label="Service-account key file (optional)"><input value={p.credentialsPath ?? ''} onChange={(e) => patch(i, { credentialsPath: e.target.value })} /></Field>
+              </div>
+              <Field label="Models (one per line, publisher/model)"><textarea rows={3} value={(p.models ?? []).join('\n')} onChange={(e) => patch(i, { models: lines(e.target.value) })} /></Field>
+            </>
+          )}
+          {groups.find((g) => g.provider === p.id)?.error && <p className="error small">{groups.find((g) => g.provider === p.id)!.error}</p>}
+        </div>
+      ))}
+      <button onClick={add}>Add provider</button>
+
+      <h2>Agent</h2>
+      <div className="row">
+        <Field label={loading ? 'Default model (loading…)' : 'Default model'}>
+          <select value={s.defaultModel} onChange={(e) => setS({ ...s, defaultModel: e.target.value })}>
+            <option value="">Choose a model</option>
+            {s.defaultModel && !known.includes(s.defaultModel) && <option value={s.defaultModel}>{s.defaultModel}</option>}
+            {groups.map((g) => (
+              <optgroup key={g.provider} label={g.name}>
+                {g.models.map((m) => <option key={m} value={m}>{m}</option>)}
+              </optgroup>
+            ))}
+          </select>
+        </Field>
+        <Field label="Reasoning">
+          <select value={s.reasoning} onChange={(e) => setS({ ...s, reasoning: e.target.value as S['reasoning'] })}>
+            {['off', 'low', 'medium', 'high'].map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </Field>
+        <Field label="Most steps per run"><input type="number" min="1" value={s.maxTurnsMain} onChange={(e) => setS({ ...s, maxTurnsMain: Math.max(1, num(e.target.value)) })} /></Field>
+      </div>
+      <p className="muted small">Save first to load the model list for a new provider.</p>
+
+      <div className="savebar">
+        <button className="primary" onClick={save}>Save</button>
+        <span className="muted small">{note}</span>
+      </div>
+      {info && <p className="muted small">Workspace: {info.workspace}</p>}
+    </div>
+  )
+}
