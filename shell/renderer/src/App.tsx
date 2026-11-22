@@ -1,51 +1,95 @@
-import { Component, useCallback, useEffect, useState, type ReactNode } from 'react'
-import Today from '@workspace/ui/Today'
-import type { AppInfo, Goals } from '../../shared/api'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ScreenView, type ScreenHost } from 'neovai-kernel/cards/live-ui/react'
+import { MessageList } from 'neovai-kernel/cards/chat-view/react'
+import { applyEvent, type Item } from 'neovai-kernel/cards/chat-view'
+import type { AppInfo, Goals, MainState } from '../../shared/api'
 import Codify from './Codify'
+import Markdown from './Markdown'
 import Settings from './Settings'
 
-type Tab = 'today' | 'codify' | 'settings'
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'today', label: 'Today' },
-  { id: 'codify', label: 'Codify' },
-  { id: 'settings', label: 'Settings' }
-]
-
-/** Workspace screens are edited by the agent, so a broken one must not take the shell down. */
-class Guard extends Component<{ children: ReactNode }, { error: string | null }> {
-  state = { error: null as string | null }
-  static getDerivedStateFromError(e: unknown) { return { error: String((e as Error)?.message ?? e) } }
-  render() {
-    return this.state.error
-      ? <div className="error">This screen failed to load: {this.state.error}</div>
-      : this.props.children
-  }
-}
+const EMPTY: MainState = { screens: [], data: {}, jobs: [], running: [], reports: {} }
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('today')
+  const [tab, setTab] = useState('')
   const [info, setInfo] = useState<AppInfo | null>(null)
   const [goals, setGoals] = useState<Goals | null>(null)
+  const [main, setMain] = useState<MainState>(EMPTY)
+  const [tick, setTick] = useState(0)
+  const [runs, setRuns] = useState<Record<string, Item[]>>({})
+  const [runError, setRunError] = useState('')
   const loadGoals = useCallback(() => { window.api.getGoals().then(setGoals) }, [])
+  const loadMain = useCallback(() => {
+    window.api.mainState().then((m) => { setMain(m); setTick((t) => t + 1) }).catch(() => {})
+  }, [])
 
-  useEffect(() => { window.api.info().then(setInfo); loadGoals() }, [loadGoals])
+  useEffect(() => {
+    window.api.info().then(setInfo)
+    loadGoals()
+    loadMain()
+    const offChanged = window.api.onMainChanged(loadMain)
+    const offRun = window.api.onRunEvent((job, e) => {
+      if (e.kind === 'error') setRunError(`${job}: ${e.message}`)
+      setRuns((s) => ({ ...s, [job]: applyEvent(s[job] ?? [], e) }))
+    })
+    return () => { offChanged(); offRun() }
+  }, [loadGoals, loadMain])
+
+  const screens = main.screens
+  const current = tab || screens[0]?.name || 'codify'
+  const screen = screens.find((s) => s.name === current)
+
+  const host: ScreenHost = useMemo(() => ({
+    data: main.data,
+    running: main.running,
+    reports: main.reports,
+    panelProps: { goals },
+    Markdown,
+    loadPanel: (file) => window.api.loadPanel(file),
+    onPanelError: (file, message) => { void window.api.reportPanelError(file, message) },
+    runJob: async (job) => {
+      setRunError('')
+      setRuns((s) => ({ ...s, [job]: [] }))
+      const r = await window.api.runJob(job)
+      if (!r.ok) setRunError(r.error ?? 'The run did not start.')
+    },
+    stopJob: (job) => { void window.api.stopJob(job) }
+  }), [main, goals])
+
+  // What the runtime agent is doing now, for the jobs this screen can run.
+  const live = screen ? main.running.filter((j) => JSON.stringify(screen.screen ?? {}).includes(`"job":"${j}"`)) : []
 
   return (
     <div className="app">
       <nav className="nav">
         <div className="brand">Neovai Investor</div>
-        {TABS.map((t) => (
-          <button key={t.id} className={tab === t.id ? 'navbtn active' : 'navbtn'} onClick={() => setTab(t.id)}>{t.label}</button>
+        {screens.map((s) => (
+          <button key={s.name} className={current === s.name ? 'navbtn active' : 'navbtn'} onClick={() => setTab(s.name)}>
+            {s.title}{s.errors.length > 0 && <span className="navwarn" title="This screen's file has problems"> !</span>}
+          </button>
         ))}
+        <div className="navsep" />
+        <button className={current === 'codify' ? 'navbtn active' : 'navbtn'} onClick={() => setTab('codify')}>Codify</button>
+        <button className={current === 'settings' ? 'navbtn active' : 'navbtn'} onClick={() => setTab('settings')}>Settings</button>
         <div className="navfoot">
           <div>Not financial advice.</div>
           {info && <div>v{info.version} · kernel {info.kernel}</div>}
         </div>
       </nav>
       <main className="main">
-        <div className="pane" hidden={tab !== 'today'}><Guard><Today goals={goals} /></Guard></div>
-        <div className="pane chatpane" hidden={tab !== 'codify'}><Codify /></div>
-        {tab === 'settings' && <div className="pane"><Settings info={info} onGoalsSaved={loadGoals} /></div>}
+        {screen && (
+          <div className="pane">
+            {runError && <div className="error">{runError}</div>}
+            <ScreenView screen={screen.screen} errors={screen.errors} host={host} tick={tick} />
+            {live.map((j) => (
+              <details key={j} className="runlog" open>
+                <summary>Working on {main.jobs.find((x) => x.name === j)?.title ?? j}…</summary>
+                <div className="messages"><MessageList items={runs[j] ?? []} Markdown={Markdown} /></div>
+              </details>
+            ))}
+          </div>
+        )}
+        <div className="pane chatpane" hidden={current !== 'codify'}><Codify /></div>
+        {current === 'settings' && <div className="pane"><Settings info={info} onGoalsSaved={loadGoals} /></div>}
       </main>
     </div>
   )

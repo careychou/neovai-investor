@@ -1,0 +1,53 @@
+{
+  "title": "Today",
+  "order": 1,
+  "blocks": [
+    {
+      "type": "run",
+      "job": "daily",
+      "label": "Run today's scan"
+    },
+    {
+      "type": "panel",
+      "file": "ui/Today.tsx"
+    },
+    {
+      "type": "markdown",
+      "data": "today.summary"
+    },
+    {
+      "type": "metrics",
+      "title": "Market",
+      "data": "today.metrics"
+    },
+    {
+      "type": "row",
+      "blocks": [
+        {
+          "type": "recommendations",
+          "title": "Recommendations",
+          "data": "today.picks"
+        },
+        {
+          "type": "alerts",
+          "title": "Alerts",
+          "data": "today.alerts"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Watch list",
+      "data": "today.watch",
+      "columns": [
+        "ticker",
+        "reason"
+      ]
+    },
+    {
+      "type": "report",
+      "title": "Last report",
+      "job": "daily"
+    }
+  ]
+}

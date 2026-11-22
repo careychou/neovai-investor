@@ -1,0 +1,12 @@
+{
+  "title": "Review",
+  "order": 2,
+  "blocks": [
+    { "type": "heading", "text": "Performance review" },
+    { "type": "run", "job": "review", "label": "Review past picks" },
+    { "type": "markdown", "data": "review.summary" },
+    { "type": "metrics", "data": "review.metrics" },
+    { "type": "table", "title": "Outcomes", "data": "review.outcomes", "columns": ["date", "ticker", "action", "entry", "now", "result", "status"] },
+    { "type": "report", "title": "Last report", "job": "review" }
+  ]
+}

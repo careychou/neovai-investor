@@ -5,10 +5,13 @@ import type { ChatRequest, ModelAdapter } from 'neovai-kernel/cards/agent-loop'
 import { setToolLimits } from 'neovai-kernel/cards/agent-loop'
 import { ProviderRouter } from 'neovai-kernel/cards/model-providers'
 import { createSettings, type SecretBox, type Settings } from 'neovai-kernel/cards/settings'
+import { webFetch } from 'neovai-kernel/cards/web-fetch'
+import { createRuntime, type Runtime } from 'neovai-kernel/cards/runtime-agent'
+import { createLiveUi, type LiveUi, type Screen } from 'neovai-kernel/cards/live-ui'
 import { createAgent, type Agent } from './agent'
 import { loadGoals, saveGoals } from './goals'
 import { seedWorkspace } from './seed'
-import { CHANNELS, EVENT_CHANNEL, type Api, type AppInfo } from '../shared/api'
+import { CHANGED_CHANNEL, CHANNELS, EVENT_CHANNEL, RUN_EVENT_CHANNEL, type Api, type AppInfo, type MainState } from '../shared/api'
 
 app.setName('Neovai Investor')
 
@@ -16,6 +19,13 @@ let win: BrowserWindow | null = null
 let agent: Agent
 let settings: Settings
 let router: ProviderRouter
+let runtime: Runtime
+let ui: LiveUi
+
+/** Shown until the workspace has its own screens. */
+const FALLBACK: Record<string, Screen> = {
+  today: { title: 'Today', order: 1, blocks: [{ type: 'heading', text: 'Today' }, { type: 'markdown', text: 'This workspace has no screens yet. Ask Codify to add one in ui/screens.' }] }
+}
 
 function repoRoot(): string {
   return app.isPackaged ? process.resourcesPath : app.getAppPath()
@@ -70,16 +80,42 @@ app.whenReady().then(() => {
 
   // The router is rebuilt when Settings are saved, so the agent always calls through the current one
   const adapter: ModelAdapter = { stream: (req: ChatRequest, signal: AbortSignal) => router.stream(req, signal) }
+  const changed = () => win?.webContents.send(CHANGED_CHANNEL)
+  ui = createLiveUi({ workspace, fallback: FALLBACK, onChange: changed })
+  ui.watch()
+  runtime = createRuntime({
+    workspace, adapter,
+    settings: () => ({
+      model: settings.defaultModel, reasoning: settings.reasoning as never, maxTurns: settings.maxTurnsMain,
+      maxOutputTokens: settings.maxOutputTokens, maxConcurrency: settings.maxConcurrency
+    }),
+    readOnly: ['goals.json'],
+    tools: [webFetch],
+    onEvent: (_runId, job, e) => win?.webContents.send(RUN_EVENT_CHANNEL, job, e)
+  })
   agent = createAgent({
-    dataDir, workspace, adapter,
+    dataDir, workspace, adapter, ui,
     settings: () => settings,
     onEvent: (chatId, e) => win?.webContents.send(EVENT_CHANNEL, chatId, e)
   })
 
+  const mainState = (): MainState => {
+    const jobs = runtime.jobs()
+    const reports: MainState['reports'] = {}
+    for (const j of jobs) {
+      const r = runtime.lastRun(j.name)
+      reports[j.name] = r && { status: r.status, text: r.text, started: r.started, finished: r.finished }
+    }
+    return {
+      screens: ui.screens(), data: ui.data(), running: runtime.running(), reports,
+      jobs: jobs.map((j) => ({ name: j.name, title: j.title, description: j.description }))
+    }
+  }
+
   let kernel = ''
   try { kernel = JSON.parse(fs.readFileSync(path.join(repoRoot(), 'kernel.json'), 'utf8')).tag } catch { /* shown as unknown */ }
 
-  const handlers: Omit<Api, 'onEvent'> = {
+  const handlers: Omit<Api, 'onEvent' | 'onRunEvent' | 'onMainChanged'> = {
     info: async (): Promise<AppInfo> => ({ version: app.getVersion(), kernel: kernel || 'unknown', workspace }),
     secretsEncrypted: async () => box.available(),
     getSettings: async () => settings,
@@ -96,7 +132,19 @@ app.whenReady().then(() => {
       return agent.send(chatId, prompt)
     },
     stop: async (chatId) => agent.stop(chatId),
-    listSkills: async () => agent.skills().map((s) => ({ name: s.name, description: s.description }))
+    listSkills: async () => agent.skills().map((s) => ({ name: s.name, description: s.description })),
+    mainState: async () => mainState(),
+    runJob: async (job) => {
+      if (!settings.defaultModel) return { ok: false, error: 'Choose a model in Settings first.' }
+      if (runtime.running().includes(job)) return { ok: false, error: `"${job}" is already running` }
+      // Runs in the background; the window follows it through run events and a change notice at each end.
+      runtime.run(job).catch((e) => win?.webContents.send(RUN_EVENT_CHANNEL, job, { kind: 'error', message: String(e?.message ?? e) })).finally(changed)
+      changed()
+      return { ok: true }
+    },
+    stopJob: async (job) => runtime.stop(job),
+    loadPanel: async (file) => ui.panel(file),
+    reportPanelError: async (file, message) => ui.reportError(file, message)
   }
   for (const c of CHANNELS) ipcMain.handle(c, (_e, ...args: unknown[]) => (handlers[c] as (...a: unknown[]) => unknown)(...args))
 
@@ -105,4 +153,4 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => app.quit())
-app.on('will-quit', () => agent?.dispose())
+app.on('will-quit', () => { runtime?.dispose(); ui?.dispose(); agent?.dispose() })

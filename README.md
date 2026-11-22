@@ -9,19 +9,28 @@ Not financial advice. The app never places trades or logs in to a brokerage.
 
 ## Status
 
-Part 1 of 3: the app shell, Settings, and the Codify screen, where you tell the
-agent how the app should behave. The behavior lives in five default skills
-(`workspace/skills/`): user preference, market scan, candidate evaluation,
-recommendation and performance review. The agent loads them on every run and
-edits them when you ask for a change. The scheduled daily run, the ledger and
-the self-improvement loop come in part 2.
+Version 0.3.0. The app has two halves:
+
+- **Main App**: one tab per screen in `workspace/ui/screens/*.json`. A screen is a
+  list of built-in blocks (metrics, tables, alerts, recommendations, run buttons,
+  reports, markdown) that read data from `workspace/records/data/`. When no block
+  fits, a `panel` block shows a React `.tsx` file from `workspace/ui/`, compiled
+  while the app runs. A broken file keeps showing its last working version.
+- **Run buttons** start jobs (`workspace/jobs/*.md`) on a runtime agent. Each run
+  reads the instructions, every skill in order and the job, fresh from disk, so an
+  edit applies to the next run without a rebuild. That agent may write only in
+  `workspace/records/`.
+- **Codify**: the coding agent. Tell it how the app should look or behave; it edits
+  screens, panels, jobs, skills and logic, checks its UI edits with `check_ui`, and
+  the change shows at once.
+
 See `docs/design.md`.
 
 ## Layout
 
 - `shell/` — the fixed Electron and React shell. The agent cannot edit it.
 - `workspace/` — the only folder the agent edits: `instructions/`, `skills/`,
-  `records/`, `logic/`, `ui/`, `tests/`. `goals.json` is read-only to the agent; change it in Settings.
+  `jobs/`, `records/`, `logic/`, `ui/` (screens and panels), `tests/`. `goals.json` is read-only to the agent; change it in Settings.
 - `kernel.json` — the kernel tag this app is built against.
 
 ## Run
@@ -31,7 +40,7 @@ tag in `kernel.json`.
 
 ```sh
 git clone https://github.com/careychou/neovai-kernel ../neovai-kernel
-git -C ../neovai-kernel checkout v0.2.0
+git -C ../neovai-kernel checkout v0.3.0
 npm install
 npm run build && npx electron .
 ```
@@ -51,9 +60,10 @@ meant for the machine that built it.
 
 The installed app works on its own copy of `workspace/`, made on first launch
 at `~/Library/Application Support/Neovai Investor/workspace`. Reinstalling does
-not replace that copy; an update only adds top-level folders the copy does not
-have yet. The Today screen is compiled into the app, so changes
-under `workspace/ui` do not show in the installed app yet.
+not replace that copy; an update only adds files and folders the app has never
+shipped before (tracked in `.seeded.json`), so nothing you or Codify changed or
+deleted is overwritten or brought back. Screens, panels, jobs and skills in that
+copy apply live.
 
 ## Check
 

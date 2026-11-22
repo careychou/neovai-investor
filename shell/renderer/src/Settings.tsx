@@ -26,9 +26,10 @@ export default function Settings({ info, onGoalsSaved }: { info: AppInfo | null;
     try { setGroups(await window.api.listModels()) } catch { setGroups([]) }
     setLoading(false)
   }
+  // The OS key store can block while it shows a prompt, so it is asked only once a key is entered, never on open.
+  const askEncrypted = () => { if (encrypted === null) window.api.secretsEncrypted().then(setEncrypted).catch(() => {}) }
   useEffect(() => {
     window.api.getSettings().then(setS)
-    window.api.secretsEncrypted().then(setEncrypted)
     window.api.getGoals().then(setGoals)
     loadModels()
   }, [])
@@ -88,7 +89,7 @@ export default function Settings({ info, onGoalsSaved }: { info: AppInfo | null;
           {p.kind !== 'vertex' && (
             <div className="row">
               <Field label={p.kind === 'azure' ? 'Resource URL' : 'Base URL'}><input value={p.baseUrl} placeholder={p.kind === 'azure' ? 'https://<resource>.openai.azure.com' : 'http://localhost:4000/v1'} onChange={(e) => patch(i, { baseUrl: e.target.value })} /></Field>
-              <Field label="API key"><input type="password" value={p.apiKey} onChange={(e) => patch(i, { apiKey: e.target.value })} /></Field>
+              <Field label="API key"><input type="password" value={p.apiKey} onFocus={askEncrypted} onChange={(e) => patch(i, { apiKey: e.target.value })} /></Field>
             </div>
           )}
           {p.kind === 'azure' && (

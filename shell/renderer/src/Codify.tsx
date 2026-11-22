@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Chat as ChatRow, SkillInfo } from '../../shared/api'
+import { applyEvent, fromMessages, type Item } from 'neovai-kernel/cards/chat-view'
+import { MessageList } from 'neovai-kernel/cards/chat-view/react'
 import Markdown from './Markdown'
-import { applyEvent, fromMessages, summarize, type Item } from './items'
 
 /** Where the user tells the agent how the app should behave. */
 export default function Codify() {
@@ -12,7 +13,6 @@ export default function Codify() {
   const [draft, setDraft] = useState('')
   const [skills, setSkills] = useState<SkillInfo[]>([])
   const box = useRef<HTMLTextAreaElement>(null)
-  const [open, setOpen] = useState<Record<string, boolean>>({})
   const bottom = useRef<HTMLDivElement>(null)
   const busyRef = useRef(busy)
   busyRef.current = busy
@@ -117,34 +117,17 @@ export default function Codify() {
       <section className="thread">
         <div className="messages">
           {list.length === 0 && (
-            <p className="muted empty">Say how the app should behave. The agent writes it into the app's skills, logic and screens, and it applies from the next run.</p>
+            <p className="muted empty">Say how the app should look or behave. Codify changes the screens, jobs, skills and code in the workspace, and the change shows at once.</p>
           )}
-          {list.map((it, i) => {
-            if (it.kind === 'user') return <div key={i} className="msg user">{it.text}</div>
-            if (it.kind === 'assistant') return <div key={i} className="msg assistant"><Markdown text={it.text} /></div>
-            if (it.kind === 'error') return <div key={i} className="error">{it.text}</div>
-            const key = it.callId
-            const state = it.ok === undefined ? 'running' : it.ok ? 'ok' : 'failed'
-            return (
-              <div key={i} className={`tool ${state}`}>
-                <div className="toolhead" onClick={() => setOpen((s) => ({ ...s, [key]: !s[key] }))}>
-                  <span className="dot" />
-                  <b>{it.name}</b>
-                  <span className="toolsum">{summarize(it.name, it.args)}</span>
-                  <span className="toolstate">{state}</span>
-                </div>
-                {open[key] && <pre className="toolout">{it.output ?? 'Running…'}</pre>}
-              </div>
-            )
-          })}
-          {running && <div className="muted small working">Working…</div>}
+          <MessageList items={list} Markdown={Markdown} />
+          {running && list.at(-1)?.kind !== 'reasoning' && <div className="muted small working">Working…</div>}
           <div ref={bottom} />
         </div>
         <div className="composer">
           <textarea
             ref={box}
             value={draft}
-            placeholder="Describe a change, for example: never recommend more than two buys a day"
+            placeholder="Describe a change, for example: show sector performance as a table on Today"
             rows={3}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send() } }}

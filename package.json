@@ -1,8 +1,8 @@
 {
   "name": "neovai-investor",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "Neovai Investor: a daily stock-pick assistant that improves its own instructions, logic and screens.",
+  "description": "Neovai Investor: a daily stock-pick assistant that whose screens, jobs and skills change live through its Codify agent.",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -16,6 +16,7 @@
   "dependencies": {
     "dompurify": "^3.4.17",
     "marked": "^18.2.0",
+    "sucrase": "^3.35.0",
     "neovai-kernel": "file:../neovai-kernel"
   },
   "devDependencies": {

@@ -28,6 +28,4 @@ Use the web fetch tool. Give every number its source and the time you read it.
 
 ## Sources that worked
 
-Keep this list up to date. After each scan, add any source that returned good data and remove any that failed twice in a row.
-
-- (none recorded yet)
+Keep this list in `records/sources.md`; read it before you fetch. After each scan, add any source that returned good data and remove any that failed twice in a row. Create the file if it does not exist.

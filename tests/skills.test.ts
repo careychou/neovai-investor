@@ -46,11 +46,39 @@ describe('seedWorkspace', () => {
     expect(fs.existsSync(path.join(own, 'skills', 'a', 'SKILL.md'))).toBe(true)
   })
 
-  it('never overwrites or restores skills once the folder exists', () => {
+  it('adds new nested files once, and never brings back a file the user deleted', () => {
+    seedWorkspace(bundled, own)
+    fs.mkdirSync(path.join(bundled, 'ui', 'screens'), { recursive: true })
+    fs.writeFileSync(path.join(bundled, 'ui', 'screens', 'today.json'), '{}')
+    fs.rmSync(path.join(own, 'skills', 'a'), { recursive: true })
+    expect(seedWorkspace(bundled, own)).toEqual(['ui'])
+    expect(fs.existsSync(path.join(own, 'ui', 'screens', 'today.json'))).toBe(true)
+    expect(fs.existsSync(path.join(own, 'skills', 'a'))).toBe(false)
+    fs.rmSync(path.join(own, 'ui', 'screens', 'today.json'))
+    expect(seedWorkspace(bundled, own)).toEqual([])
+  })
+
+  it('upgrades a 0.2.0 workspace: adds new folders inside existing ones, keeps deleted 0.2.0 skills deleted', () => {
+    fs.mkdirSync(path.join(bundled, 'skills', 'market-scan'), { recursive: true })
+    fs.writeFileSync(path.join(bundled, 'skills', 'market-scan', 'SKILL.md'), 'default')
+    fs.mkdirSync(path.join(bundled, 'ui', 'screens'), { recursive: true })
+    fs.writeFileSync(path.join(bundled, 'ui', 'Today.tsx'), 'default')
+    fs.writeFileSync(path.join(bundled, 'ui', 'screens', 'today.json'), '{}')
+    fs.mkdirSync(path.join(own, 'ui'), { recursive: true })
+    fs.writeFileSync(path.join(own, 'ui', 'Today.tsx'), 'edited')
+    fs.writeFileSync(path.join(own, 'goals.json'), '{}')
+    fs.mkdirSync(path.join(own, 'skills'))
+    expect(seedWorkspace(bundled, own)).toEqual(['skills/a', 'ui/screens'])
+    expect(fs.readFileSync(path.join(own, 'ui', 'Today.tsx'), 'utf8')).toBe('edited')
+    expect(fs.existsSync(path.join(own, 'skills', 'market-scan'))).toBe(false)
+  })
+
+  it('never overwrites a file that exists', () => {
     fs.mkdirSync(path.join(own, 'skills', 'mine'), { recursive: true })
     fs.writeFileSync(path.join(own, 'skills', 'mine', 'SKILL.md'), 'edited')
-    expect(seedWorkspace(bundled, own)).toEqual(['goals.json'])
-    expect(fs.existsSync(path.join(own, 'skills', 'a'))).toBe(false)
+    fs.writeFileSync(path.join(own, 'goals.json'), 'mine')
+    seedWorkspace(bundled, own)
+    expect(fs.readFileSync(path.join(own, 'goals.json'), 'utf8')).toBe('mine')
     expect(fs.readFileSync(path.join(own, 'skills', 'mine', 'SKILL.md'), 'utf8')).toBe('edited')
   })
 })

@@ -16,7 +16,7 @@ export default defineConfig({
   renderer: {
     root: at('shell/renderer'),
     plugins: [react()],
-    resolve: { alias: { '@workspace': at('workspace') } },
+    resolve: { dedupe: ['react', 'react-dom'] },
     server: { fs: { allow: [at('.')] } },
     build: { rollupOptions: { input: at('shell/renderer/index.html') } }
   }

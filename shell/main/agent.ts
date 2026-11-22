@@ -10,9 +10,11 @@ import { webFetch } from 'neovai-kernel/cards/web-fetch'
 import { PermissionGate } from 'neovai-kernel/cards/approval'
 import { Store, type SessionRow } from 'neovai-kernel/cards/session-store'
 import { loadSkills, makeSkillTool, skillsPrompt, type Skill } from 'neovai-kernel/cards/skills'
+import { loadJobs } from 'neovai-kernel/cards/runtime-agent'
+import { BLOCK_TYPES, makeCheckUiTool, type LiveUi } from 'neovai-kernel/cards/live-ui'
 
 /** The kernel cards this app is built from. `compose` fails at start if one is missing. */
-export const CARDS = ['agent-loop', 'model-providers', 'file-tools', 'shell', 'web-fetch', 'approval', 'session-store', 'settings', 'skills']
+export const CARDS = ['agent-loop', 'model-providers', 'file-tools', 'shell', 'web-fetch', 'approval', 'session-store', 'settings', 'skills', 'chat-view', 'runtime-agent', 'live-ui']
 
 /** Files in the workspace the agent may read but never change. */
 export const READ_ONLY = ['goals.json']
@@ -34,6 +36,8 @@ export interface AgentOptions {
   /** Read before every run, so a change in Settings applies to the next prompt. */
   settings: () => AgentSettings
   onEvent: (chatId: string, e: AgentEvent) => void
+  /** The live screens, so the agent can check its UI edits. */
+  ui?: LiveUi
 }
 
 export interface Agent {
@@ -52,14 +56,23 @@ export interface Agent {
   dispose(): void
 }
 
-const BASE_PROMPT = `You are the agent inside Neovai Investor, a desktop app that recommends stocks to its user and improves itself over time.
+const BASE_PROMPT = `You are Codify, the coding agent inside Neovai Investor, a desktop app that recommends stocks to its user. The user tells you how the app should look and behave, and you change the app's workspace so it does. Every change applies at once, without a new version.
+
+# How the app works
+- The Main App runs jobs with a separate runtime agent. Each run reads instructions/system.md, every skill in skills/ (in order) and the job file, fresh from disk. That agent may write only inside records/.
+- Jobs: jobs/<name>.md, with title: and description: lines between two --- lines, then the prompt. A job saves what screens show with save_data(name, data), which writes records/data/<name>.json.
+- Skills: skills/<name>/SKILL.md, with description: and order: lines between two --- lines. They say how to do the work.
+- Screens: ui/screens/<name>.json. Each is a tab in the Main App: {"title", "order", "blocks": [...]}. Blocks: ${BLOCK_TYPES.join(', ')}.
+  - heading {text}; markdown {text | data}; metrics {title?, data | items: [{label, value, change?, note?}]}; table {title?, data | rows, columns?}; list {title?, data | items}; alerts {title?, data | items: [{level: info|warn|bad|good, text}]}; recommendations {title?, data | items: [{ticker, action, reason, confidence, target, stop}]}; run {job, label?}; report {job, title?}; panel {file}; row {blocks}.
+  - data is a path into records/data: "today.picks" reads records/data/today.json, key picks.
+- Panels: when no block fits, write a React component in a .tsx file in ui/ and add a panel block. It gets props data (all saved data) and goals. It may import react and relative files in the workspace, nothing else. Style it with the app's classes or inline styles.
 
 # How to work
 - Act with your tools instead of describing what you would do. Call independent tools in parallel.
 - You may read and change files only inside the workspace folder. goals.json is read-only: only the user changes it, in Settings.
 - Shell commands run in the workspace folder without asking the user. Give each one a short description. Use an async shell for long jobs.
-- How to do each job is written in skills: skills/<name>/SKILL.md in the workspace. The Skills section below lists them. Load a skill with the skill tool before you do the work it covers. A full daily run uses the skills in the listed order.
-- When the user asks for the app to behave differently, edit the SKILL.md that covers it, then say which file and which rule changed. For a new kind of job, add a folder with a SKILL.md that starts with a description: line and an order: line between two --- lines. Changes apply from the next message.
+- After you change a screen or panel, call check_ui and fix every problem it reports. A broken file never blanks the app; it keeps showing the last version that worked, so check.
+- For a change in behavior, edit the skill or job that covers it. For a change in what is shown, edit the screen, and add to the job's save_data shape if new data is needed. Then say which files changed and what the user will see.
 - Say one short sentence before a batch of tool calls.
 - Never print secrets such as API keys.
 - You cannot place trades or log in to a brokerage. Nothing you say is financial advice.`
@@ -74,12 +87,14 @@ export function createAgent(o: AgentOptions): Agent {
   const shells = new ShellManager()
   const skillsDir = path.join(o.workspace, 'skills')
   const tools: ToolDef[] = [...makeFileTools({ root: o.workspace, readOnly: READ_ONLY }), ...shellTools, webFetch, makeSkillTool({ dir: skillsDir })]
+  if (o.ui) tools.push(makeCheckUiTool(o.ui))
   const sessions = new Map<string, Session>()
 
   const systemPrompt = () => [
     BASE_PROMPT,
     `# Instructions\n${readText(path.join(o.workspace, 'instructions', 'system.md')) || '(none yet)'}`,
     `# Skills\n${skillsPrompt(loadSkills(skillsDir))}`,
+    `# Jobs\n${loadJobs(path.join(o.workspace, 'jobs')).map((j) => `- ${j.name}: ${j.description}`).join('\n') || '(none yet)'}`,
     `# Goals (read-only)\n${readText(path.join(o.workspace, 'goals.json')) || '(not set)'}`,
     `# Environment\n- Workspace: ${o.workspace}\n- Platform: ${os.platform()} ${os.arch()}\n- Date: ${new Date().toISOString().slice(0, 10)}`
   ].join('\n\n')

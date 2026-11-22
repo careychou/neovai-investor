@@ -57,7 +57,7 @@ outside the clone, in the app's data folder, and is never pushed.
 
 ## 3. Card inventory
 
-All 24 cards are built in the kernel. An app chooses which to compose.
+All 27 cards are built in the kernel. An app chooses which to compose.
 
 | # | Card | What it does | Investor v1 |
 |---|------|--------------|-------------|
@@ -85,6 +85,9 @@ All 24 cards are built in the kernel. An app chooses which to compose.
 | 22 | memory | Long-term notes across runs | no |
 | 23 | notifications | macOS notifications | no |
 | 24 | attachments | Image and document attachments | no |
+| 25 | chat-view | Shared chat timeline (kernel v0.3.0): messages, a collapsible thoughts block, tool calls grouped and collapsed, as data plus React and CSS. Used by Codify and the run log | yes |
+| 26 | runtime-agent | Runs workspace jobs (`jobs/<name>.md`) for the Main App; every skill is appended in full, in order, to its instruction and re-read each run; writes only under `records/`; `save_data` feeds the screens | yes |
+| 27 | live-ui | Main App screens described in `ui/screens/*.json` with built-in blocks; `panel` blocks compile workspace `.tsx` files at runtime and keep the last good build; `check_ui` tool for Codify | yes |
 
 ## 4. The daily loop
 

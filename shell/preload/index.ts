@@ -1,12 +1,18 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CHANNELS, EVENT_CHANNEL, type Api } from '../shared/api'
+import { CHANGED_CHANNEL, CHANNELS, EVENT_CHANNEL, RUN_EVENT_CHANNEL, type Api } from '../shared/api'
 
 const api: Record<string, unknown> = {}
 for (const c of CHANNELS) api[c] = (...args: unknown[]) => ipcRenderer.invoke(c, ...args)
-api.onEvent = (fn: (chatId: string, e: unknown) => void) => {
-  const h = (_: unknown, chatId: string, e: unknown) => fn(chatId, e)
-  ipcRenderer.on(EVENT_CHANNEL, h)
-  return () => ipcRenderer.removeListener(EVENT_CHANNEL, h)
+
+function listen(channel: string) {
+  return (fn: (...a: unknown[]) => void) => {
+    const h = (_: unknown, ...a: unknown[]) => fn(...a)
+    ipcRenderer.on(channel, h)
+    return () => { ipcRenderer.removeListener(channel, h) }
+  }
 }
+api.onEvent = listen(EVENT_CHANNEL)
+api.onRunEvent = listen(RUN_EVENT_CHANNEL)
+api.onMainChanged = listen(CHANGED_CHANNEL)
 
 contextBridge.exposeInMainWorld('api', api as unknown as Api)

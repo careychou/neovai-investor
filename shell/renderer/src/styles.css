@@ -31,6 +31,11 @@ input[type='checkbox'] { width: auto; }
 .brand { font-weight: 600; padding: 0 8px 14px; }
 .navbtn { text-align: left; border-color: transparent; background: none; }
 .navbtn.active { background: var(--bg); border-color: var(--line); }
+.navwarn { color: var(--bad); font-weight: 700; }
+.navsep { height: 1px; background: var(--line); margin: 6px 4px; }
+.runlog { margin-top: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.runlog summary { padding: 8px 12px; cursor: pointer; color: var(--muted); }
+.runlog .messages { max-height: 360px; padding: 8px 12px; }
 .navfoot { margin-top: auto; color: var(--muted); font-size: 11px; padding: 0 8px; }
 .main { flex: 1; min-width: 0; }
 .pane { height: 100%; overflow: auto; padding: 32px 36px; }
@@ -56,8 +61,6 @@ input[type='checkbox'] { width: auto; }
 .thread { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .messages { flex: 1; overflow: auto; padding: 24px 28px 8px; display: flex; flex-direction: column; gap: 10px; }
 .empty { margin: auto; text-align: center; max-width: 360px; }
-.msg { max-width: 780px; }
-.msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-radius: 12px; padding: 8px 12px; white-space: pre-wrap; }
 .md { overflow-wrap: anywhere; }
 .md p { margin: 0 0 8px; }
 .md pre { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; overflow: auto; }
@@ -65,15 +68,6 @@ input[type='checkbox'] { width: auto; }
 .md table { border-collapse: collapse; }
 .md th, .md td { border: 1px solid var(--line); padding: 4px 8px; }
 .md a { color: var(--accent); }
-.tool { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); max-width: 780px; }
-.toolhead { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; }
-.toolsum { flex: 1; color: var(--muted); font: 12px ui-monospace, Menlo, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.toolstate { color: var(--muted); font-size: 11px; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
-.tool.ok .dot { background: var(--ok); }
-.tool.failed .dot { background: var(--bad); }
-.tool.failed .toolstate { color: var(--bad); }
-.toolout { margin: 0; padding: 8px 10px; border-top: 1px solid var(--line); font: 12px/1.5 ui-monospace, Menlo, monospace; max-height: 280px; overflow: auto; white-space: pre-wrap; }
 .composer { display: flex; gap: 8px; padding: 12px 28px 18px; align-items: flex-end; }
 .composer textarea { resize: none; }
 
