@@ -167,7 +167,7 @@ export default function Codify({ request, screens = [] }: { request?: CodifyRequ
             onSend={(text, atts) => void send(text, atts)}
             running={running}
             onStop={() => active && window.api.stop(active)}
-            placeholder="Describe a change, for example: show sector performance as a table on Today. Attach a screenshot or file with ＋, paste or drop."
+            placeholder="Describe a change, for example: show sector performance as a table on Today. Attach a screenshot or file with the paperclip, paste or drop."
           />
         </div>
       </section>
