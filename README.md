@@ -9,7 +9,7 @@ Not financial advice. The app never places trades or logs in to a brokerage.
 
 ## Status
 
-Version 0.6.0. The app has two halves:
+Version 0.7.0. The app has two halves:
 
 - **Main App**: one tab per skill, each with its own job: Today (market-scan),
   Candidates (candidate-evaluation), Recommendations (recommendation: new stocks,
@@ -21,6 +21,12 @@ Version 0.6.0. The app has two halves:
   reports, markdown) that read data from `workspace/records/data/`. When no block
   fits, a `panel` block shows a React `.tsx` file from `workspace/ui/`, compiled
   while the app runs. A broken file keeps showing its last working version.
+  Panels are interactive: from `@neovai/panel` they can start jobs with options
+  (`run(job, {mode: ...})`), stop them and follow their progress, Accept or Decline
+  calls, keep their own choices across restarts (`usePanelState`), draw any
+  built-in block inside themselves, and open Codify. They may also import
+  `recharts`, `lucide-react` and `date-fns`. A `run` block can carry options too
+  (`"input": {...}`); the runtime agent gets them with the run.
 - **Run buttons** start jobs (`workspace/jobs/*.md`) on a runtime agent. Each run
   reads the instructions, every skill in order and the job, fresh from disk, so an
   edit applies to the next run without a rebuild. That agent may write only in
@@ -54,7 +60,7 @@ tag in `kernel.json`.
 
 ```sh
 git clone https://github.com/careychou/neovai-kernel ../neovai-kernel
-git -C ../neovai-kernel checkout v0.6.0
+git -C ../neovai-kernel checkout v0.7.0
 npm install
 npm run build && npx electron .
 ```

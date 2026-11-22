@@ -65,10 +65,10 @@ export default function App() {
     Markdown,
     loadPanel: (file) => window.api.loadPanel(file),
     onPanelError: (file, message) => { void window.api.reportPanelError(file, message) },
-    runJob: async (job) => {
+    runJob: async (job, input) => {
       setRunError('')
       setRuns((s) => ({ ...s, [job]: [] }))
-      const r = await window.api.runJob(job)
+      const r = await window.api.runJob(job, input)
       if (!r.ok) setRunError(r.error ?? 'The run did not start.')
     },
     stopJob: (job) => { void window.api.stopJob(job) }

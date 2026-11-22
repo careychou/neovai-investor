@@ -2,7 +2,7 @@ import type { AgentEvent, Attachment, Message } from 'neovai-kernel/cards/agent-
 import type { Settings } from 'neovai-kernel/cards/settings'
 import type { ModelGroup } from 'neovai-kernel/cards/model-providers'
 import type { SessionRow } from 'neovai-kernel/cards/session-store'
-import type { Decision, PanelResult, Recommendation, ScreenState } from 'neovai-kernel/cards/live-ui'
+import type { Decision, PanelResult, Recommendation, RunInput, ScreenState } from 'neovai-kernel/cards/live-ui'
 import type { AppSettings } from '../main/app-settings'
 
 export type { AgentEvent, Message, Settings, AppSettings, ModelGroup, PanelResult, ScreenState, Decision, Recommendation }
@@ -18,7 +18,7 @@ export interface AppInfo { version: string; kernel: string; workspace: string }
 
 export interface JobInfo { name: string; title: string; description: string }
 
-export interface RunReport { status: string; text: string; started: string; finished: string }
+export interface RunReport { status: string; text: string; started: string; finished: string; input?: string }
 
 /** Everything the Main App screens need, read in one call. */
 export interface MainState {
@@ -58,8 +58,8 @@ export interface Api {
   /** Records accepting or declining a recommendation in records/data/decisions.json; null undoes it. */
   decide(rec: Recommendation, decision: Decision | null): Promise<void>
   mainState(): Promise<MainState>
-  /** Starts a job; the result arrives through onRunEvent and mainState. */
-  runJob(job: string): Promise<{ ok: boolean; error?: string }>
+  /** Starts a job; `input` holds options picked on the screen. The result arrives through onRunEvent and mainState. */
+  runJob(job: string, input?: RunInput): Promise<{ ok: boolean; error?: string }>
   stopJob(job: string): Promise<void>
   loadPanel(file: string): Promise<PanelResult>
   reportPanelError(file: string, message: string): Promise<void>
@@ -70,6 +70,9 @@ export interface Api {
   /** Something in the workspace changed: screens, data, panels or a run started or ended. */
   onMainChanged(fn: () => void): () => void
 }
+
+/** Libraries code panels may import besides react and @neovai/panel. The renderer supplies them. */
+export const PANEL_LIBRARIES = ['recharts', 'lucide-react', 'date-fns'] as const
 
 export const CHANNELS = [
   'info', 'secretsEncrypted', 'getSettings', 'saveSettings', 'listModels', 'getGoals', 'saveGoals',

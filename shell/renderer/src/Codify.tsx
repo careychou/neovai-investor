@@ -7,9 +7,9 @@ import Markdown from './Markdown'
 const LEARN = 'Look at the picks I accepted and declined (records/data/decisions.json) and how past picks did (records/data/review.json and the Outcome sections in records/). Tell me what patterns you see in what I take, what I skip, and what worked. Then propose specific changes to the skills, each with the reason and the evidence. Make a change only after I agree.'
 
 /** A screen asking Codify to change it or one of its skills. `at` makes each click a new request. */
-export interface CodifyRequest { screen: string; title: string; skill?: string; at: number }
+export interface CodifyRequest { screen: string; title: string; skill?: string; text?: string; at: number }
 
-const screenAsk = (r: { screen: string; title: string }) => `On the ${r.title} screen (ui/screens/${r.screen}.json), `
+const screenAsk = (r: { screen: string; title: string; text?: string }) => `On the ${r.title} screen (ui/screens/${r.screen}.json), ${r.text ?? ''}`
 
 /** Where the user tells the agent how the app should behave. */
 export default function Codify({ request, screens = [] }: { request?: CodifyRequest | null; screens?: ScreenState[] }) {

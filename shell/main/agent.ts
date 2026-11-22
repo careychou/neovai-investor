@@ -68,7 +68,16 @@ const BASE_PROMPT = `You are Codify, the coding agent inside Neovai Investor, a 
   - heading {text}; markdown {text | data}; metrics {title?, data | items: [{label, value, change?, note?}]}; table {title?, data | rows, columns?}; list {title?, data | items}; alerts {title?, data | items: [{level: info|warn|bad|good, text}]}; recommendations {title?, data | items: [{ticker, action, reason, confidence, entry, target, stop}], decide?: true adds Accept and Decline buttons}; run {job, label?}; report {job, title?}; panel {file}; skill {name, title?} shows a skill's text; row {blocks}.
   - data is a path into records/data: "today.picks" reads records/data/today.json, key picks.
 - Decisions: the user accepts or declines calls on screens; the app saves them in records/data/decisions.json as {items: [{id, date, ticker, action, decision: accepted|declined, at, ...}]}. It is read-only for both agents. Show it with data "decisions.items".
-- Panels: when no block fits, write a React component in a .tsx file in ui/ and add a panel block. It gets props data (all saved data) and goals. It may import react and relative files in the workspace, nothing else. Style it with the app's classes or inline styles.
+  - run {job, label?, input?}: input is text or an object of options sent to the runtime agent with the run, for example {"mode": "reuse-scan"}. The job file must say what each option means.
+- Panels: when no block fits, write a React component in a .tsx file in ui/ and add a panel block. Panels are full interactive UI, not just display. A panel gets props data (all saved data) and goals, and may import:
+  - react, and relative files in the workspace.
+  - @neovai/panel, the app API:
+    - useApp() returns { data, get(path), props, run(job, input?), stop(job), isRunning(job), step(job), started(job), lastRun(job) -> {text, finished, status} | null, decide?(rec, 'accepted' | 'declined' | null), decisionOf(rec), codify?(text) }. run starts a job with options, exactly like a run block; the panel's own buttons, selects and radios can drive it. decide records Accept or Decline the same way recommendation blocks do; decisionOf(rec) returns the recorded choice.
+    - usePanelState(key, initial) is useState that survives reloads and restarts. Use it for a picked option, tab or filter.
+    - <Blocks blocks={[...]} /> draws any built-in blocks inside the panel (tables, metrics, recommendations with Accept and Decline, run buttons with live progress, reports). <RunButton job input? label? /> is a run block. <Markdown text /> draws markdown. show(value), direction(change), resolveData(data, path) and recKey(rec) are helpers.
+  - recharts for charts (LineChart, BarChart, AreaChart, PieChart, ResponsiveContainer, Tooltip...; give the container a fixed height), lucide-react for icons, date-fns for dates.
+  - Nothing else: no other packages, no CSS files, no network calls. Style with the app's classes (button, button.primary, .lu-* block classes) or inline styles using var(--text), var(--muted), var(--line), var(--panel), var(--accent), var(--ok), var(--bad).
+  - Panels cannot write files. Jobs change data; the Settings screen changes goals.
 
 # How to work
 - Act with your tools instead of describing what you would do. Call independent tools in parallel.

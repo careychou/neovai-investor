@@ -7,12 +7,12 @@ import { ProviderRouter } from 'neovai-kernel/cards/model-providers'
 import { createSettings, type SecretBox } from 'neovai-kernel/cards/settings'
 import { webFetch } from 'neovai-kernel/cards/web-fetch'
 import { createRuntime, type Runtime } from 'neovai-kernel/cards/runtime-agent'
-import { createLiveUi, type LiveUi, type Screen } from 'neovai-kernel/cards/live-ui'
+import { createLiveUi, DEFAULT_EXTERNALS, type LiveUi, type Screen } from 'neovai-kernel/cards/live-ui'
 import { createAgent, type Agent } from './agent'
 import { loadGoals, saveGoals } from './goals'
 import { seedWorkspace } from './seed'
 import { APP_DEFAULTS, runtimeModelOf, type AppSettings } from './app-settings'
-import { CHANGED_CHANNEL, CHANNELS, EVENT_CHANNEL, RUN_EVENT_CHANNEL, type Api, type AppInfo, type MainState } from '../shared/api'
+import { CHANGED_CHANNEL, CHANNELS, PANEL_LIBRARIES, EVENT_CHANNEL, RUN_EVENT_CHANNEL, type Api, type AppInfo, type MainState } from '../shared/api'
 
 app.setName('Neovai Investor')
 
@@ -82,7 +82,7 @@ app.whenReady().then(() => {
   // The router is rebuilt when Settings are saved, so the agent always calls through the current one
   const adapter: ModelAdapter = { stream: (req: ChatRequest, signal: AbortSignal) => router.stream(req, signal) }
   const changed = () => win?.webContents.send(CHANGED_CHANNEL)
-  ui = createLiveUi({ workspace, fallback: FALLBACK, onChange: changed })
+  ui = createLiveUi({ workspace, fallback: FALLBACK, onChange: changed, externals: [...DEFAULT_EXTERNALS, ...PANEL_LIBRARIES] })
   ui.watch()
   runtime = createRuntime({
     workspace, adapter,
@@ -108,7 +108,7 @@ app.whenReady().then(() => {
     const reports: MainState['reports'] = {}
     for (const j of jobs) {
       const r = runtime.lastRun(j.name)
-      reports[j.name] = r && { status: r.status, text: r.text, started: r.started, finished: r.finished }
+      reports[j.name] = r && { status: r.status, text: r.text, started: r.started, finished: r.finished, input: r.input }
     }
     return {
       screens: ui.screens(), data: ui.data(), running: runtime.running(), reports,
@@ -147,12 +147,12 @@ app.whenReady().then(() => {
     },
     decide: async (rec, decision) => { ui.decide(rec, decision); changed() },
     mainState: async () => mainState(),
-    runJob: async (job) => {
+    runJob: async (job, input) => {
       if (!runtimeModelOf(settings)) return { ok: false, error: 'Choose a model in Settings first.' }
       if (runtime.running().includes(job)) return { ok: false, error: `"${job}" is already running` }
       // Runs in the background; the window follows it through run events and a change notice at each end.
       started[job] = Date.now()
-      runtime.run(job).catch((e) => win?.webContents.send(RUN_EVENT_CHANNEL, job, { kind: 'error', message: String(e?.message ?? e) })).finally(changed)
+      runtime.run(job, input).catch((e) => win?.webContents.send(RUN_EVENT_CHANNEL, job, { kind: 'error', message: String(e?.message ?? e) })).finally(changed)
       changed()
       return { ok: true }
     },
