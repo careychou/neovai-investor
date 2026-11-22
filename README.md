@@ -35,6 +35,21 @@ npm run build && npx electron .
 Then open Settings, add a model provider (any OpenAI-compatible endpoint, Azure
 or Vertex), pick a default model and save.
 
+## Install as a Mac app
+
+```sh
+npm run dist
+```
+
+This writes `dist/mac-arm64/Neovai Investor.app` and a `.dmg` next to it. Copy
+the app to `/Applications`. It is signed ad hoc and not notarized, so it is
+meant for the machine that built it.
+
+The installed app works on its own copy of `workspace/`, made on first launch
+at `~/Library/Application Support/Neovai Investor/workspace`. Reinstalling does
+not replace that copy. The Today screen is compiled into the app, so changes
+under `workspace/ui` do not show in the installed app yet.
+
 ## Check
 
 ```sh

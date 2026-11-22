@@ -42,7 +42,13 @@ function createWindow() {
 
 app.whenReady().then(() => {
   const dataDir = app.getPath('userData')
-  const workspace = path.resolve(process.env.NEOVAI_WORKSPACE || path.join(repoRoot(), 'workspace'))
+  // The installed app is read-only, so it works on a copy in the data folder.
+  const bundled = path.join(repoRoot(), 'workspace')
+  const own = path.join(dataDir, 'workspace')
+  if (app.isPackaged && !process.env.NEOVAI_WORKSPACE && !fs.existsSync(own) && fs.existsSync(bundled)) {
+    fs.cpSync(bundled, own, { recursive: true })
+  }
+  const workspace = path.resolve(process.env.NEOVAI_WORKSPACE || (app.isPackaged ? own : bundled))
   if (!fs.existsSync(workspace)) {
     dialog.showErrorBox('Neovai Investor', `Workspace folder not found: ${workspace}`)
     app.quit()

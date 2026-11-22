@@ -10,7 +10,8 @@
     "start": "electron-vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "check:kernel": "node scripts/check-kernel.mjs"
+    "check:kernel": "node scripts/check-kernel.mjs",
+    "dist": "electron-vite build && electron-builder --mac"
   },
   "dependencies": {
     "dompurify": "^3.4.17",
@@ -23,11 +24,44 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
     "electron": "^45.3.2",
+    "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vitest": "^4.1.12"
+  },
+  "build": {
+    "appId": "dev.careychou.neovai-investor",
+    "productName": "Neovai Investor",
+    "files": [
+      "out/**"
+    ],
+    "extraResources": [
+      {
+        "from": "workspace",
+        "to": "workspace"
+      },
+      {
+        "from": "kernel.json",
+        "to": "kernel.json"
+      }
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.finance",
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "artifactName": "neovai-investor-${version}-${arch}.${ext}",
+    "publish": null
   }
 }
