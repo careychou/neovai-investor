@@ -3,21 +3,25 @@
 A desktop app that recommends stocks and improves itself over time. It carries a
 small agent harness (the [Neovai kernel](https://github.com/careychou/neovai-kernel))
 next to its own logic and screens, so the agent can change the app's
-instructions, logic and UI from your feedback.
+skills, logic and UI from your feedback.
 
 Not financial advice. The app never places trades or logs in to a brokerage.
 
 ## Status
 
-Part 1 of 3: the app shell, Settings, and a chat with the agent. The daily
-recommendation run, the ledger and the self-improvement loop come in part 2.
+Part 1 of 3: the app shell, Settings, and the Codify screen, where you tell the
+agent how the app should behave. The behavior lives in five default skills
+(`workspace/skills/`): user preference, market scan, candidate evaluation,
+recommendation and performance review. The agent loads them on every run and
+edits them when you ask for a change. The scheduled daily run, the ledger and
+the self-improvement loop come in part 2.
 See `docs/design.md`.
 
 ## Layout
 
 - `shell/` — the fixed Electron and React shell. The agent cannot edit it.
-- `workspace/` — the only folder the agent edits: `instructions/`, `logic/`,
-  `ui/`, `tests/`. `goals.json` is read-only to the agent; change it in Settings.
+- `workspace/` — the only folder the agent edits: `instructions/`, `skills/`,
+  `records/`, `logic/`, `ui/`, `tests/`. `goals.json` is read-only to the agent; change it in Settings.
 - `kernel.json` — the kernel tag this app is built against.
 
 ## Run
@@ -27,7 +31,7 @@ tag in `kernel.json`.
 
 ```sh
 git clone https://github.com/careychou/neovai-kernel ../neovai-kernel
-git -C ../neovai-kernel checkout v0.1.0
+git -C ../neovai-kernel checkout v0.2.0
 npm install
 npm run build && npx electron .
 ```
@@ -47,7 +51,8 @@ meant for the machine that built it.
 
 The installed app works on its own copy of `workspace/`, made on first launch
 at `~/Library/Application Support/Neovai Investor/workspace`. Reinstalling does
-not replace that copy. The Today screen is compiled into the app, so changes
+not replace that copy; an update only adds top-level folders the copy does not
+have yet. The Today screen is compiled into the app, so changes
 under `workspace/ui` do not show in the installed app yet.
 
 ## Check

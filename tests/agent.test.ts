@@ -115,4 +115,26 @@ describe('investor agent', () => {
     agent.deleteChat(chat.id)
     expect(agent.listChats()).toEqual([])
   })
+
+  it('lists skills in the system prompt and rereads them on every call', () => {
+    start([])
+    expect(agent.systemPrompt()).toContain('(no skills yet)')
+    const dir = path.join(workspace, 'skills', 'scan')
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(path.join(dir, 'SKILL.md'), '---\ndescription: Scan the market.\norder: 1\n---\nBODY-ONE')
+    expect(agent.systemPrompt()).toContain('- scan: Scan the market.')
+    expect(agent.skills().map((s) => s.name)).toEqual(['scan'])
+    fs.writeFileSync(path.join(dir, 'SKILL.md'), '---\ndescription: Scan twice.\norder: 1\n---\nBODY-TWO')
+    expect(agent.systemPrompt()).toContain('- scan: Scan twice.')
+  })
+
+  it('gives the model a skill tool that returns the skill body', async () => {
+    const dir = path.join(workspace, 'skills', 'scan')
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(path.join(dir, 'SKILL.md'), '---\ndescription: Scan the market.\n---\nBODY-ONE')
+    start([call(['skill', { name: 'scan' }]), say('done')])
+    const chat = agent.newChat()
+    await agent.send(chat.id, 'scan please')
+    expect(toolOutputs(requests[1].messages)[0]).toContain('BODY-ONE')
+  })
 })

@@ -19,6 +19,7 @@ export default function Settings({ info, onGoalsSaved }: { info: AppInfo | null;
   const [goals, setGoals] = useState<Goals | null>(null)
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
+  const [encrypted, setEncrypted] = useState<boolean | null>(null)
 
   const loadModels = async () => {
     setLoading(true)
@@ -27,6 +28,7 @@ export default function Settings({ info, onGoalsSaved }: { info: AppInfo | null;
   }
   useEffect(() => {
     window.api.getSettings().then(setS)
+    window.api.secretsEncrypted().then(setEncrypted)
     window.api.getGoals().then(setGoals)
     loadModels()
   }, [])
@@ -70,7 +72,7 @@ export default function Settings({ info, onGoalsSaved }: { info: AppInfo | null;
       </div>
 
       <h2>Model providers</h2>
-      {info && !info.secretsEncrypted && <p className="error">This computer cannot encrypt saved keys, so they are stored as plain text.</p>}
+      {encrypted === false && <p className="error">This computer cannot encrypt saved keys, so they are stored as plain text.</p>}
       {s.providers.map((p, i) => (
         <div key={p.id} className="provider">
           <div className="row">

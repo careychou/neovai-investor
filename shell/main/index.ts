@@ -7,6 +7,7 @@ import { ProviderRouter } from 'neovai-kernel/cards/model-providers'
 import { createSettings, type SecretBox, type Settings } from 'neovai-kernel/cards/settings'
 import { createAgent, type Agent } from './agent'
 import { loadGoals, saveGoals } from './goals'
+import { seedWorkspace } from './seed'
 import { CHANNELS, EVENT_CHANNEL, type Api, type AppInfo } from '../shared/api'
 
 app.setName('Neovai Investor')
@@ -45,9 +46,8 @@ app.whenReady().then(() => {
   // The installed app is read-only, so it works on a copy in the data folder.
   const bundled = path.join(repoRoot(), 'workspace')
   const own = path.join(dataDir, 'workspace')
-  if (app.isPackaged && !process.env.NEOVAI_WORKSPACE && !fs.existsSync(own) && fs.existsSync(bundled)) {
-    fs.cpSync(bundled, own, { recursive: true })
-  }
+  // An update adds new top-level folders (such as skills) without touching what is already there.
+  if (app.isPackaged && !process.env.NEOVAI_WORKSPACE) seedWorkspace(bundled, own)
   const workspace = path.resolve(process.env.NEOVAI_WORKSPACE || (app.isPackaged ? own : bundled))
   if (!fs.existsSync(workspace)) {
     dialog.showErrorBox('Neovai Investor', `Workspace folder not found: ${workspace}`)
@@ -80,7 +80,8 @@ app.whenReady().then(() => {
   try { kernel = JSON.parse(fs.readFileSync(path.join(repoRoot(), 'kernel.json'), 'utf8')).tag } catch { /* shown as unknown */ }
 
   const handlers: Omit<Api, 'onEvent'> = {
-    info: async (): Promise<AppInfo> => ({ version: app.getVersion(), kernel: kernel || 'unknown', workspace, secretsEncrypted: box.available() }),
+    info: async (): Promise<AppInfo> => ({ version: app.getVersion(), kernel: kernel || 'unknown', workspace }),
+    secretsEncrypted: async () => box.available(),
     getSettings: async () => settings,
     saveSettings: async (s) => { store.save(s); apply(store.load()) },
     listModels: () => router.listGroups(),
@@ -94,7 +95,8 @@ app.whenReady().then(() => {
       if (!settings.defaultModel) return { status: 'failed', text: 'Choose a model in Settings first.' }
       return agent.send(chatId, prompt)
     },
-    stop: async (chatId) => agent.stop(chatId)
+    stop: async (chatId) => agent.stop(chatId),
+    listSkills: async () => agent.skills().map((s) => ({ name: s.name, description: s.description }))
   }
   for (const c of CHANNELS) ipcMain.handle(c, (_e, ...args: unknown[]) => (handlers[c] as (...a: unknown[]) => unknown)(...args))
 

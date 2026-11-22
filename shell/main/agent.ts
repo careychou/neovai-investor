@@ -9,9 +9,10 @@ import { shellTools, ShellManager } from 'neovai-kernel/cards/shell'
 import { webFetch } from 'neovai-kernel/cards/web-fetch'
 import { PermissionGate } from 'neovai-kernel/cards/approval'
 import { Store, type SessionRow } from 'neovai-kernel/cards/session-store'
+import { loadSkills, makeSkillTool, skillsPrompt, type Skill } from 'neovai-kernel/cards/skills'
 
 /** The kernel cards this app is built from. `compose` fails at start if one is missing. */
-export const CARDS = ['agent-loop', 'model-providers', 'file-tools', 'shell', 'web-fetch', 'approval', 'session-store', 'settings']
+export const CARDS = ['agent-loop', 'model-providers', 'file-tools', 'shell', 'web-fetch', 'approval', 'session-store', 'settings', 'skills']
 
 /** Files in the workspace the agent may read but never change. */
 export const READ_ONLY = ['goals.json']
@@ -46,6 +47,8 @@ export interface Agent {
   stop(chatId: string): void
   isBusy(chatId: string): boolean
   systemPrompt(): string
+  /** The workspace skills, read from disk on every call. */
+  skills(): Skill[]
   dispose(): void
 }
 
@@ -55,6 +58,8 @@ const BASE_PROMPT = `You are the agent inside Neovai Investor, a desktop app tha
 - Act with your tools instead of describing what you would do. Call independent tools in parallel.
 - You may read and change files only inside the workspace folder. goals.json is read-only: only the user changes it, in Settings.
 - Shell commands run in the workspace folder without asking the user. Give each one a short description. Use an async shell for long jobs.
+- How to do each job is written in skills: skills/<name>/SKILL.md in the workspace. The Skills section below lists them. Load a skill with the skill tool before you do the work it covers. A full daily run uses the skills in the listed order.
+- When the user asks for the app to behave differently, edit the SKILL.md that covers it, then say which file and which rule changed. For a new kind of job, add a folder with a SKILL.md that starts with a description: line and an order: line between two --- lines. Changes apply from the next message.
 - Say one short sentence before a batch of tool calls.
 - Never print secrets such as API keys.
 - You cannot place trades or log in to a brokerage. Nothing you say is financial advice.`
@@ -67,12 +72,14 @@ export function createAgent(o: AgentOptions): Agent {
   compose(CARDS)
   const store = new Store(o.dataDir)
   const shells = new ShellManager()
-  const tools: ToolDef[] = [...makeFileTools({ root: o.workspace, readOnly: READ_ONLY }), ...shellTools, webFetch]
+  const skillsDir = path.join(o.workspace, 'skills')
+  const tools: ToolDef[] = [...makeFileTools({ root: o.workspace, readOnly: READ_ONLY }), ...shellTools, webFetch, makeSkillTool({ dir: skillsDir })]
   const sessions = new Map<string, Session>()
 
   const systemPrompt = () => [
     BASE_PROMPT,
     `# Instructions\n${readText(path.join(o.workspace, 'instructions', 'system.md')) || '(none yet)'}`,
+    `# Skills\n${skillsPrompt(loadSkills(skillsDir))}`,
     `# Goals (read-only)\n${readText(path.join(o.workspace, 'goals.json')) || '(not set)'}`,
     `# Environment\n- Workspace: ${o.workspace}\n- Platform: ${os.platform()} ${os.arch()}\n- Date: ${new Date().toISOString().slice(0, 10)}`
   ].join('\n\n')
@@ -110,6 +117,7 @@ export function createAgent(o: AgentOptions): Agent {
   return {
     store,
     systemPrompt,
+    skills: () => loadSkills(skillsDir),
     listChats: () => store.listSessions(),
     newChat() {
       const now = Date.now()

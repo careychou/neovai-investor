@@ -44,6 +44,12 @@ input[type='checkbox'] { width: auto; }
 .chat { display: flex; height: 100%; }
 .chatlist { width: 220px; border-right: 1px solid var(--line); padding: 14px 10px; overflow: auto; display: flex; flex-direction: column; gap: 4px; }
 .chatlist .primary { margin-bottom: 8px; }
+.skills { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+.skillshead { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 0 6px 4px; }
+.skillrow { text-align: left; background: none; border: 0; border-radius: 6px; padding: 5px 6px; color: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 1px; font: inherit; }
+.skillrow:hover { background: var(--panel); }
+.skillrow b { font-size: 12px; font-weight: 600; }
+.skillrow span { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chatrow { display: flex; align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
 .chatrow:hover, .chatrow.active { background: var(--panel); }
 .chattitle { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

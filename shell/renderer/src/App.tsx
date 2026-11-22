@@ -1,13 +1,13 @@
 import { Component, useCallback, useEffect, useState, type ReactNode } from 'react'
 import Today from '@workspace/ui/Today'
 import type { AppInfo, Goals } from '../../shared/api'
-import Chat from './Chat'
+import Codify from './Codify'
 import Settings from './Settings'
 
-type Tab = 'today' | 'chat' | 'settings'
+type Tab = 'today' | 'codify' | 'settings'
 const TABS: { id: Tab; label: string }[] = [
   { id: 'today', label: 'Today' },
-  { id: 'chat', label: 'Chat' },
+  { id: 'codify', label: 'Codify' },
   { id: 'settings', label: 'Settings' }
 ]
 
@@ -44,7 +44,7 @@ export default function App() {
       </nav>
       <main className="main">
         <div className="pane" hidden={tab !== 'today'}><Guard><Today goals={goals} /></Guard></div>
-        <div className="pane chatpane" hidden={tab !== 'chat'}><Chat /></div>
+        <div className="pane chatpane" hidden={tab !== 'codify'}><Codify /></div>
         {tab === 'settings' && <div className="pane"><Settings info={info} onGoalsSaved={loadGoals} /></div>}
       </main>
     </div>
