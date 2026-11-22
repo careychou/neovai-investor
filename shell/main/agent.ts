@@ -3,7 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { compose } from 'neovai-kernel/compose'
-import { Session, type AgentEvent, type Hooks, type Message, type ModelAdapter, type Reasoning, type SendResult, type ToolDef } from 'neovai-kernel/cards/agent-loop'
+import { Session, type AgentEvent, type Attachment, type Hooks, type Message, type ModelAdapter, type Reasoning, type SendResult, type ToolDef } from 'neovai-kernel/cards/agent-loop'
 import { makeFileTools } from 'neovai-kernel/cards/file-tools'
 import { shellTools, ShellManager } from 'neovai-kernel/cards/shell'
 import { webFetch } from 'neovai-kernel/cards/web-fetch'
@@ -47,7 +47,7 @@ export interface Agent {
   /** Saved messages of a chat, without the system prompt. */
   openChat(id: string): Message[]
   deleteChat(id: string): void
-  send(chatId: string, prompt: string): Promise<SendResult>
+  send(chatId: string, prompt: string, attachments?: Attachment[]): Promise<SendResult>
   stop(chatId: string): void
   isBusy(chatId: string): boolean
   systemPrompt(): string
@@ -72,6 +72,7 @@ const BASE_PROMPT = `You are Codify, the coding agent inside Neovai Investor, a 
 
 # How to work
 - Act with your tools instead of describing what you would do. Call independent tools in parallel.
+- The user may attach screenshots, mockups or files to a request. Treat an attached image as the reference for how a screen should look, and say which parts you matched.
 - You may read and change files only inside the workspace folder. goals.json is read-only: only the user changes it, in Settings.
 - Shell commands run in the workspace folder without asking the user. Give each one a short description. Use an async shell for long jobs.
 - After you change a screen or panel, call check_ui and fix every problem it reports. A broken file never blanks the app; it keeps showing the last version that worked, so check.
@@ -150,15 +151,15 @@ export function createAgent(o: AgentOptions): Agent {
       sessions.delete(id)
       store.deleteSession(id)
     },
-    async send(chatId, prompt) {
+    async send(chatId, prompt, attachments = []) {
       const session = sessionFor(chatId)
       const s = o.settings()
       session.setModel(s.defaultModel)
       session.setReasoning(s.reasoning as Reasoning)
       if (store.getSession(chatId)?.title === 'New chat') {
-        store.updateSession(chatId, { title: prompt.replace(/\s+/g, ' ').trim().slice(0, 60) || 'New chat', model: s.defaultModel })
+        store.updateSession(chatId, { title: prompt.replace(/\s+/g, ' ').trim().slice(0, 60) || (attachments.length ? `Attached: ${attachments.map((a) => a.name).join(', ')}`.slice(0, 60) : 'New chat'), model: s.defaultModel })
       }
-      const result = await session.send(prompt)
+      const result = await session.send(prompt, attachments)
       if (result.status !== 'queued' && store.getSession(chatId)) {
         store.saveMessages(chatId, session.history)
         store.touchSession(chatId)

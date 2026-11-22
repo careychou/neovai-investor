@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Chat as ChatRow, ScreenState, SkillInfo, SkillText } from '../../shared/api'
-import { applyEvent, fromMessages, type Item } from 'neovai-kernel/cards/chat-view'
-import { MessageList } from 'neovai-kernel/cards/chat-view/react'
+import { applyEvent, fromMessages, type Attachment, type Item } from 'neovai-kernel/cards/chat-view'
+import { Composer, MessageList } from 'neovai-kernel/cards/chat-view/react'
 import Markdown from './Markdown'
 
 const LEARN = 'Look at the picks I accepted and declined (records/data/decisions.json) and how past picks did (records/data/review.json and the Outcome sections in records/). Tell me what patterns you see in what I take, what I skip, and what worked. Then propose specific changes to the skills, each with the reason and the evidence. Make a change only after I agree.'
@@ -83,16 +83,17 @@ export default function Codify({ request, screens = [] }: { request?: CodifyRequ
   // Reload an open skill when a run changes it.
   useEffect(() => { if (viewing && !running) window.api.readSkill(viewing.name).then((v) => v && setViewing(v)) }, [running, skills])
 
-  const send = async () => {
-    const prompt = draft.trim()
-    if (!prompt || running) return
+  const send = async (prompt: string, atts: Attachment[] = []) => {
+    if ((!prompt && !atts.length) || running) return
     const id = active ?? (await newChat())
     setDraft('')
-    setItems((s) => ({ ...s, [id]: [...(s[id] ?? []), { kind: 'user', text: prompt }] }))
+    const images = atts.flatMap((a) => (a.kind === 'image' ? [a.dataUrl] : []))
+    const files = atts.flatMap((a) => (a.kind === 'text' ? [a.name] : []))
+    setItems((s) => ({ ...s, [id]: [...(s[id] ?? []), { kind: 'user', text: prompt, ...(images.length ? { images } : {}), ...(files.length ? { files } : {}) }] }))
     setBusy((s) => ({ ...s, [id]: true }))
     let failure: string | null = null
     try {
-      const r = await window.api.send(id, prompt)
+      const r = await window.api.send(id, prompt, atts)
       if (r.status === 'failed') failure = r.text || 'The run failed.'
     } catch (e) {
       failure = String((e as Error)?.message ?? e)
@@ -159,17 +160,15 @@ export default function Codify({ request, screens = [] }: { request?: CodifyRequ
           <div ref={bottom} />
         </div>
         <div className="composer">
-          <textarea
-            ref={box}
+          <Composer
+            inputRef={box}
             value={draft}
-            placeholder="Describe a change, for example: show sector performance as a table on Today"
-            rows={3}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send() } }}
+            onChange={setDraft}
+            onSend={(text, atts) => void send(text, atts)}
+            running={running}
+            onStop={() => active && window.api.stop(active)}
+            placeholder="Describe a change, for example: show sector performance as a table on Today. Attach a screenshot or file with ＋, paste or drop."
           />
-          {running
-            ? <button className="danger" onClick={() => active && window.api.stop(active)}>Stop</button>
-            : <button className="primary" disabled={!draft.trim()} onClick={send}>Send</button>}
         </div>
       </section>
     </div>

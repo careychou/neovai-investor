@@ -133,9 +133,9 @@ app.whenReady().then(() => {
     newChat: async () => agent.newChat(),
     openChat: async (id) => ({ messages: agent.openChat(id), busy: agent.isBusy(id) }),
     deleteChat: async (id) => agent.deleteChat(id),
-    send: async (chatId, prompt) => {
+    send: async (chatId, prompt, attachments) => {
       if (!settings.defaultModel) return { status: 'failed', text: 'Choose a model in Settings first.' }
-      return agent.send(chatId, prompt)
+      return agent.send(chatId, prompt, attachments)
     },
     stop: async (chatId) => agent.stop(chatId),
     listSkills: async () => agent.skills().map((s) => ({ name: s.name, description: s.description })),

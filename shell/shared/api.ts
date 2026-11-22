@@ -1,4 +1,4 @@
-import type { AgentEvent, Message } from 'neovai-kernel/cards/agent-loop'
+import type { AgentEvent, Attachment, Message } from 'neovai-kernel/cards/agent-loop'
 import type { Settings } from 'neovai-kernel/cards/settings'
 import type { ModelGroup } from 'neovai-kernel/cards/model-providers'
 import type { SessionRow } from 'neovai-kernel/cards/session-store'
@@ -49,7 +49,8 @@ export interface Api {
   newChat(): Promise<Chat>
   openChat(id: string): Promise<{ messages: Message[]; busy: boolean }>
   deleteChat(id: string): Promise<void>
-  send(chatId: string, prompt: string): Promise<SendResult>
+  /** Images and files go to the model with the prompt (see the kernel chat-view Composer). */
+  send(chatId: string, prompt: string, attachments?: Attachment[]): Promise<SendResult>
   stop(chatId: string): Promise<void>
   listSkills(): Promise<SkillInfo[]>
   /** The full SKILL.md of one skill, read from disk. */

@@ -9,7 +9,7 @@ Not financial advice. The app never places trades or logs in to a brokerage.
 
 ## Status
 
-Version 0.5.0. The app has two halves:
+Version 0.6.0. The app has two halves:
 
 - **Main App**: one tab per skill, each with its own job: Today (market-scan),
   Candidates (candidate-evaluation), Recommendations (recommendation: new stocks,
@@ -34,7 +34,9 @@ Version 0.5.0. The app has two halves:
   screens, panels, jobs, skills and logic, checks its UI edits with `check_ui`, and
   the change shows at once. Click a skill to read it in full. "Improve skills from
   my picks" asks Codify to study your decisions and the review results and propose
-  skill changes, which it makes only after you agree.
+  skill changes, which it makes only after you agree. Attach screenshots, mockups
+  or text files to a request with the ＋ button, by pasting, or by dropping them on
+  the input (the kernel chat-view `Composer`); images show as thumbnails in the chat.
 
 See `docs/design.md`.
 
@@ -52,7 +54,7 @@ tag in `kernel.json`.
 
 ```sh
 git clone https://github.com/careychou/neovai-kernel ../neovai-kernel
-git -C ../neovai-kernel checkout v0.5.0
+git -C ../neovai-kernel checkout v0.6.0
 npm install
 npm run build && npx electron .
 ```
