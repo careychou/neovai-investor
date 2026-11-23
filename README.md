@@ -175,6 +175,90 @@ sequenceDiagram
   U->>W: Accept / Decline → api.decide() → live-ui saves decisions.json
 ```
 
+**Two agents, one harness**
+
+Both agents are an agent-loop `Session`: the same model router, the same tool loop, the same events and
+the same chat-view rows. Their tools, instructions and write limits make them different.
+
+| | Runtime agent (the Main App) | Codify (the coding agent) |
+|---|---|---|
+| Started by | a screen's Run button or chat (Market Scan, Candidates, Recommendations, Performance, Preferences) | the Codify tab, or "Change this screen" on any screen |
+| Built with | `createRuntime` (runtime-agent card) in `shell/main/index.ts` | `createAgent` in `shell/main/agent.ts` |
+| Instruction | `instructions/system.md` + every skill in full, in order + the job file + `goals.json`, read fresh from disk each run | Codify's `BASE_PROMPT` (how the app is built) + skill and job summaries + preferences |
+| Tools | read files, `save_data`, web-fetch, `task` (parallel helpers) | read **and edit** files, shell, web-fetch, skill tool, `check_ui`, `task` (parallel and background helpers) |
+| May write | only `records/` (its answer and the data screens show) | the whole workspace: `ui/`, `skills/`, `jobs/`, `instructions/`, `logic/` (not `goals.json` or `decisions.json`) |
+| Result | an answer and fresh data; the logic and UI stay the same | a new version of the app's UI, logic or instructions, live at once |
+
+*Example 1: the runtime agent answers a question (uses the logic, changes none of it).* On Market Scan the
+user clicks **Run market scan**. The runtime agent follows the `market-scan` skill, fetches prices and news in
+parallel helpers, saves `records/data/market.json`, and the screen redraws with the new numbers. Candidates,
+Recommendations and Performance work the same way with their own skill and job.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant S as Market Scan screen (live-ui)
+  participant I as main/index.ts
+  participant RT as runtime-agent
+  participant L as agent-loop Session
+  participant SA as sub-agents (helpers)
+  participant T as Tools (read files, web-fetch, save_data)
+  participant WS as workspace
+
+  U->>S: clicks "Run market scan"
+  S->>I: api.runJob("scan")
+  I->>RT: runtime.run("scan")
+  RT->>WS: reads instructions/system.md, skills/* (in order), jobs/scan.md, goals.json
+  RT->>L: new Session: that instruction, read-only tools, write only records/
+  loop until the model stops calling tools
+    L->>SA: task "news for AAPL", task "news for MSFT" (same reply, run together)
+    SA->>T: web_fetch prices and news
+    SA-->>L: each helper's answer
+    L->>T: save_data("market", {...})
+    T->>WS: records/data/market.json
+    L-->>S: RUN_EVENT → live steps under the Run button
+  end
+  RT->>WS: records/runs/scan/<run>.md (the answer)
+  WS-->>S: CHANGED → blocks redraw with the new data
+  Note over RT,WS: skills, jobs, ui/ untouched: the run cannot edit them
+```
+
+*Example 2: Codify changes the app (UI/UX, logic, instructions).* The user types *"On Market Scan, show news
+only for stocks I accepted and hold, and add a candlestick chart for each."* Codify uses the same loop, but its
+tools edit the workspace: the screen file, a new panel, the job's data shape and the skill. It checks the screen,
+and the next Market Scan run follows the new logic without a rebuild.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant C as Codify chat (chat-view)
+  participant A as agent.ts (Codify)
+  participant L as agent-loop Session
+  participant T as Tools (file-tools, shell, skill, check_ui, task)
+  participant WS as workspace
+  participant LU as live-ui
+  participant RT as runtime-agent (next run)
+
+  U->>C: "Market Scan: news only for stocks I hold, plus a chart"
+  C->>A: api.send(chatId, prompt, attachments)
+  A->>L: session.send() with Codify's prompt
+  loop until the model stops calling tools
+    L->>T: read decisions.json, skills/market-scan, jobs/scan.md, ui/screens/today.json
+    L->>T: edit skills/market-scan/SKILL.md (logic: filter to held stocks)
+    L->>T: edit jobs/scan.md (save_data shape: news per holding)
+    L->>T: write ui/HoldingsNews.tsx, add panel + chart blocks to ui/screens/today.json (UI/UX)
+    T->>WS: files saved
+    WS-->>LU: CHANGED → screen redraws, panel compiles (last good kept on error)
+    L->>T: check_ui → fix any problem it reports
+    L-->>C: EVENT → summary › steps › input/output
+  end
+  U->>LU: clicks "Run market scan"
+  LU->>RT: runtime.run("scan") reads the edited skill and job from disk
+  RT-->>LU: new data in the new shape → new panel shows it
+```
+
 To add a feature for every app, add or extend a card in the kernel, tag it, bump `kernel.json`, and wire it in
 `shell/main/index.ts` (headless part), `shared/api.ts` + `preload` (a new channel if the window needs it), and
 the renderer (React part).
