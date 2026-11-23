@@ -49,6 +49,130 @@ Version 0.10.0. New in 0.10.0: every chat (Codify and run activity) shows tool s
 
 See `docs/design.md`.
 
+## How the app uses the kernel cards
+
+The app is a thin Electron shell. Every agent feature comes from a card in
+[`neovai-kernel`](https://github.com/careychou/neovai-kernel), linked as `"neovai-kernel": "file:../neovai-kernel"`
+and pinned by the tag in `kernel.json` (`npm run check:kernel` checks it). Main code imports headless cards from
+`neovai-kernel/cards/<name>`; the window imports React parts from `neovai-kernel/cards/<name>/react`.
+
+```mermaid
+flowchart LR
+  subgraph R["Renderer (window) — shell/renderer/src"]
+    APP["App.tsx<br/>tabs, Preferences, Settings"]
+    COD["Codify.tsx<br/>chat with the coding agent"]
+    LUR["live-ui/react<br/>ScreenHost, blocks, Chart,<br/>panels (@neovai/panel)"]
+    CVR["chat-view/react<br/>MessageList (3 levels),<br/>Composer + paperclip"]
+    APP --> LUR
+    APP --> CVR
+    COD --> CVR
+  end
+
+  subgraph B["Bridge"]
+    PRE["preload/index.ts<br/>window.api = ipcRenderer.invoke per channel"]
+    API["shared/api.ts<br/>Api interface + CHANNELS"]
+  end
+
+  subgraph M["Main process — shell/main"]
+    IDX["index.ts<br/>builds everything, one ipcMain.handle per channel"]
+    AG["agent.ts — createAgent()<br/>Codify: compose(CARDS), tools, Session per chat"]
+    SET["app-settings.ts / goals.ts / seed.ts"]
+  end
+
+  subgraph K["neovai-kernel cards"]
+    direction TB
+    CMP["compose<br/>checks CARDS + dependencies"]
+    LOOP["agent-loop<br/>Session, model/tool loop, intent, plain-language rules"]
+    MP["model-providers<br/>ProviderRouter"]
+    FT["file-tools"]
+    SH["shell"]
+    WF["web-fetch"]
+    APR["approval<br/>PermissionGate"]
+    SS["session-store<br/>SQLite chats + usage"]
+    ST["settings<br/>sealed API keys"]
+    SK["skills<br/>SKILL.md + skill tool"]
+    RT["runtime-agent<br/>runs jobs/*.md headlessly"]
+    LU["live-ui<br/>screens, panel compiler, check_ui,<br/>decide, panelFetch"]
+    CV["chat-view<br/>view model"]
+  end
+
+  WS[("workspace/<br/>instructions, skills, jobs,<br/>ui/screens, ui/*.tsx, records, goals.json")]
+
+  APP & COD -- "window.api.*" --> PRE --> IDX
+  IDX -- "events: EVENT / RUN_EVENT / CHANGED" --> PRE
+  API -.types.- PRE & IDX
+  IDX --> AG & SET
+  IDX --> ST & MP & RT & LU & WF
+  AG --> CMP & LOOP & FT & SH & WF & APR & SS & SK & RT & LU
+  RT --> LOOP & SK & FT
+  LOOP --> MP
+  CVR --> CV
+  FT & SK & RT & LU <--> WS
+```
+
+**What `shell/main/index.ts` does at start-up**
+
+1. **Workspace**: copies the bundled `workspace/` into the user's app-data folder (`seed.ts`), keeping their edits.
+2. **Settings and model**: `createSettings` (settings card, keys sealed with Electron `safeStorage`) loads
+   providers; a `ProviderRouter` (model-providers) is wrapped as one `ModelAdapter` and rebuilt whenever
+   Settings are saved, so every agent always calls the current router.
+3. **Screens**: `createLiveUi` (live-ui) watches `ui/` and sends `CHANGED` to the window on any edit; panels
+   are compiled on request with the allowed libraries (`DEFAULT_EXTERNALS` + `PANEL_LIBRARIES`).
+4. **Main App agent**: `createRuntime` (runtime-agent) runs `jobs/<name>.md` with the skills, `web-fetch`,
+   and the same model as Codify; `goals.json` and `decisions.json` are read-only to it. Its events go to the
+   window as `RUN_EVENT` (the live run activity).
+5. **Codify agent**: `createAgent` (`agent.ts`) calls `compose(CARDS)`, builds the tool set (file-tools rooted
+   at the workspace, shell, web-fetch, the skill tool, `check_ui`), and opens one agent-loop `Session` per chat,
+   with `PermissionGate` (approval), history and usage in `Store` (session-store), and a system prompt that is
+   rebuilt each turn from `instructions/system.md`, the skills, the jobs and the preferences.
+6. **Bridge**: a handler map typed by `shared/api.ts` is registered with `ipcMain.handle` for every channel;
+   `preload` exposes the same channels as `window.api`.
+
+**A Codify message and a job run, end to end**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant W as Window (chat-view, live-ui)
+  participant P as preload (window.api)
+  participant I as main/index.ts
+  participant A as agent.ts (Codify)
+  participant L as agent-loop Session
+  participant MR as model-providers
+  participant T as Tools (file-tools, shell, web-fetch, skills, check_ui)
+  participant RT as runtime-agent
+  participant LU as live-ui
+
+  U->>W: types a change, attaches a screenshot (Composer)
+  W->>P: api.send(chatId, prompt, attachments)
+  P->>I: ipc "send"
+  I->>A: agent.send()
+  A->>L: session.send() with fresh system prompt
+  loop until the model stops calling tools
+    L->>MR: stream(request)
+    MR-->>L: text, thoughts, tool calls (+ intent)
+    L->>T: run tool (approval gate)
+    T-->>L: result
+    L-->>I: AgentEvent
+    I-->>W: EVENT → MessageList: summary › steps › input/output
+  end
+  T->>LU: edits ui/screens/*.json or ui/*.tsx
+  LU-->>W: CHANGED → screen redraws, panel recompiles (last good kept)
+
+  U->>W: clicks "Run market scan"
+  W->>I: api.runJob("scan")
+  I->>RT: runtime.run("scan")
+  RT->>L: headless Session with skills + job
+  L-->>RT: writes records/data/*.json
+  RT-->>W: RUN_EVENT (live steps), then CHANGED → blocks show new data
+  U->>W: Accept / Decline → api.decide() → live-ui saves decisions.json
+```
+
+To add a feature for every app, add or extend a card in the kernel, tag it, bump `kernel.json`, and wire it in
+`shell/main/index.ts` (headless part), `shared/api.ts` + `preload` (a new channel if the window needs it), and
+the renderer (React part).
+
 ## Start a new app from this template
 
 1. Copy this repo (and keep `neovai-kernel` next to it, checked out at the tag in `kernel.json`).
