@@ -18,6 +18,8 @@ let agent: Agent
 let requests: ChatRequest[]
 let events: Array<{ chatId: string; e: AgentEvent }>
 
+let shared: { dir: string; label: string; editable: boolean }[] = []
+
 function start(steps: Delta[][]) {
   requests = []
   events = []
@@ -32,11 +34,13 @@ function start(steps: Delta[][]) {
   agent = createAgent({
     dataDir: path.join(tmp, 'data'), workspace, adapter,
     settings: () => ({ defaultModel: 'm', maxTurnsMain: 20, maxOutputTokens: 0, reasoning: 'off', maxConcurrency: 4 }),
+    sharedSkills: () => shared,
     onEvent: (chatId, e) => events.push({ chatId, e })
   })
 }
 
 beforeEach(() => {
+  shared = []
   tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'neovai-investor-')))
   workspace = path.join(tmp, 'workspace')
   fs.mkdirSync(path.join(workspace, 'instructions'), { recursive: true })
@@ -136,5 +140,31 @@ describe('investor agent', () => {
     const chat = agent.newChat()
     await agent.send(chat.id, 'scan please')
     expect(toolOutputs(requests[1].messages)[0]).toContain('BODY-ONE')
+  })
+
+  it('renames a chat and keeps the name', () => {
+    start([])
+    const chat = agent.newChat()
+    agent.renameChat(chat.id, '  Scan   tech stocks ')
+    agent.renameChat(chat.id, '   ')
+    expect(agent.listChats()[0].title).toBe('Scan tech stocks')
+  })
+
+  it('adds shared skills after its own, read-only, with the workspace copy winning', async () => {
+    const own = path.join(workspace, 'skills', 'scan')
+    fs.mkdirSync(own, { recursive: true })
+    fs.writeFileSync(path.join(own, 'SKILL.md'), '---\ndescription: Own scan.\n---\nOWN')
+    const dir = path.join(tmp, 'shared')
+    for (const [n, b] of [['scan', 'SHARED-SCAN'], ['helper', 'HELPER-BODY']]) {
+      fs.mkdirSync(path.join(dir, n), { recursive: true })
+      fs.writeFileSync(path.join(dir, n, 'SKILL.md'), `---\ndescription: ${n} shared.\n---\n${b}`)
+    }
+    shared = [{ dir, label: '~/.copilot/skills', editable: false }]
+    start([call(['skill', { name: 'helper' }]), say('done')])
+    expect(agent.skills().map((s) => [s.name, s.editable])).toEqual([['scan', true], ['helper', false]])
+    expect(agent.systemPrompt()).toContain('helper: helper shared. (shared, read-only: ~/.copilot/skills)')
+    const chat = agent.newChat()
+    await agent.send(chat.id, 'use helper')
+    expect(toolOutputs(requests[1].messages)[0]).toContain('HELPER-BODY')
   })
 })

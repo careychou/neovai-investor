@@ -6,6 +6,7 @@ import type { AppInfo, Goals, MainState } from '../../shared/api'
 import Codify, { type CodifyRequest } from './Codify'
 import Markdown from './Markdown'
 import Settings from './Settings'
+import Skills from './Skills'
 
 const EMPTY: MainState = { screens: [], data: {}, jobs: [], running: [], started: {}, reports: {}, skills: {} }
 
@@ -30,6 +31,7 @@ export default function App() {
   const [runs, setRuns] = useState<Record<string, Item[]>>({})
   const [runError, setRunError] = useState('')
   const [codifyReq, setCodifyReq] = useState<CodifyRequest | null>(null)
+  const [skillReq, setSkillReq] = useState<{ name: string; at: number } | null>(null)
   const loadGoals = useCallback(() => { window.api.getGoals().then(setGoals) }, [])
   const loadMain = useCallback(() => {
     window.api.mainState().then((m) => { setMain(m); setTick((t) => t + 1) }).catch(() => {})
@@ -60,7 +62,11 @@ export default function App() {
     decide: (rec, decision) => { void window.api.decide(rec, decision) },
     reports: main.reports,
     skillText: main.skills,
-    codify: (req) => { setCodifyReq({ ...req, at: Date.now() }); setTab('codify') },
+    // A skill chip opens that skill on the Skills page; anything else is a Codify request about the screen.
+    codify: (req) => {
+      if (req.skill) { setSkillReq({ name: req.skill, at: Date.now() }); setTab('skills') }
+      else { setCodifyReq({ ...req, at: Date.now() }); setTab('codify') }
+    },
     panelProps: { goals },
     prefs: goals ?? {},
     savePrefs: async (p) => { await window.api.saveGoals(p as Goals); loadGoals() },
@@ -88,6 +94,7 @@ export default function App() {
           </button>
         ))}
         <div className="navsep" />
+        <button className={current === 'skills' ? 'navbtn active' : 'navbtn'} onClick={() => setTab('skills')}>Skills</button>
         <button className={current === 'codify' ? 'navbtn active' : 'navbtn'} onClick={() => setTab('codify')}>Codify</button>
         <button className={current === 'settings' ? 'navbtn active' : 'navbtn'} onClick={() => setTab('settings')}>Settings</button>
         <div className="navfoot">
@@ -102,7 +109,8 @@ export default function App() {
             <ScreenView screen={screen.screen} name={screen.name} errors={screen.errors} host={host} tick={tick} />
           </div>
         )}
-        <div className="pane chatpane" hidden={current !== 'codify'}><Codify request={codifyReq} screens={screens} /></div>
+        <div className="pane chatpane" hidden={current !== 'codify'}><Codify request={codifyReq} /></div>
+        {current === 'skills' && <div className="pane chatpane"><Skills open={skillReq} screens={screens} tick={tick} onCodify={(prompt) => { setCodifyReq({ prompt, at: Date.now() }); setTab('codify') }} /></div>}
         {current === 'settings' && <div className="pane"><Settings info={info} /></div>}
       </main>
     </div>

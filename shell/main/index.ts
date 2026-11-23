@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, shell } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
 import type { ChatRequest, Message, ModelAdapter } from 'neovai-kernel/cards/agent-loop'
 import { setToolLimits } from 'neovai-kernel/cards/agent-loop'
 import { ProviderRouter } from 'neovai-kernel/cards/model-providers'
@@ -12,6 +13,7 @@ import { createAgent, type Agent } from './agent'
 import { loadGoals, saveGoals } from './goals'
 import { seedWorkspace } from './seed'
 import { publish } from 'neovai-kernel/cards/git-publish'
+import { writeSkill, type SkillSource } from 'neovai-kernel/cards/skills'
 import { APP_DEFAULTS, runtimeModelOf, type AppSettings } from './app-settings'
 import { CHANGED_CHANNEL, CHANNELS, PANEL_LIBRARIES, EVENT_CHANNEL, RUN_EVENT_CHANNEL, type Api, type AppInfo, type MainState } from '../shared/api'
 
@@ -37,6 +39,14 @@ const isRemote = (s: string) => /^[\w.-]+@[\w.-]+:|^[a-z+]+:\/\//i.test(s)
 
 function repoRoot(): string {
   return app.isPackaged ? process.resourcesPath : app.getAppPath()
+}
+
+/** Shared skill folders, read-only in the app: the project's .github/skills and the user's ~/.copilot/skills. */
+function sharedSkills(): SkillSource[] {
+  return [
+    { dir: path.join(repoRoot(), '.github', 'skills'), label: '.github/skills', editable: false },
+    { dir: path.join(os.homedir(), '.copilot', 'skills'), label: '~/.copilot/skills', editable: false }
+  ].filter((s) => fs.existsSync(s.dir))
 }
 
 function createWindow() {
@@ -102,15 +112,16 @@ app.whenReady().then(() => {
     goalsTitle: 'Preferences (set by the user on the Preferences screen)',
     tools: [webFetch],
     subAgents: true,
+    sharedSkills,
     onEvent: (_runId, job, e) => win?.webContents.send(RUN_EVENT_CHANNEL, job, e)
   })
   agent = createAgent({
-    dataDir, workspace, adapter, ui,
+    dataDir, workspace, adapter, ui, sharedSkills,
     settings: () => settings,
     onEvent: (chatId, e) => win?.webContents.send(EVENT_CHANNEL, chatId, e)
   })
 
-  const readSkillFile = (name: string) => { try { return fs.readFileSync(path.join(workspace, 'skills', name, 'SKILL.md'), 'utf8') } catch { return '' } }
+  const readSkillFile = (file: string) => { try { return fs.readFileSync(file, 'utf8') } catch { return '' } }
   const started: Record<string, number> = {}
   const mainState = (): MainState => {
     const jobs = runtime.jobs()
@@ -123,7 +134,7 @@ app.whenReady().then(() => {
       screens: ui.screens(), data: ui.data(), running: runtime.running(), reports,
       started: Object.fromEntries(runtime.running().map((j) => [j, started[j] ?? Date.now()])),
       jobs: jobs.map((j) => ({ name: j.name, title: j.title, description: j.description })),
-      skills: Object.fromEntries(agent.skills().map((s) => [s.name, readSkillFile(s.name)]))
+      skills: Object.fromEntries(agent.skills().map((s) => [s.name, readSkillFile(s.file)]))
     }
   }
 
@@ -143,17 +154,26 @@ app.whenReady().then(() => {
     newChat: async () => agent.newChat(),
     openChat: async (id) => ({ messages: agent.openChat(id), busy: agent.isBusy(id) }),
     deleteChat: async (id) => agent.deleteChat(id),
+    renameChat: async (id, title) => agent.renameChat(id, title),
     send: async (chatId, prompt, attachments) => {
       if (!settings.defaultModel) return { status: 'failed', text: 'Choose a model in Settings first.' }
       return agent.send(chatId, prompt, attachments)
     },
     stop: async (chatId) => agent.stop(chatId),
-    listSkills: async () => agent.skills().map((s) => ({ name: s.name, description: s.description })),
+    listSkills: async () => agent.skills().map((s) => ({ name: s.name, description: s.description, source: s.source ?? 'Workspace', editable: s.editable !== false })),
     readSkill: async (name) => {
       const s = agent.skills().find((x) => x.name === name)
       if (!s) return null
-      const file = path.join(workspace, 'skills', s.name, 'SKILL.md')
-      try { return { name: s.name, path: path.relative(workspace, file), text: fs.readFileSync(file, 'utf8') } } catch { return null }
+      const editable = s.editable !== false
+      try {
+        return { name: s.name, path: editable ? path.relative(workspace, s.file) : s.file.replace(os.homedir(), '~'), text: fs.readFileSync(s.file, 'utf8'), source: s.source ?? 'Workspace', editable }
+      } catch { return null }
+    },
+    saveSkill: async (name, text) => {
+      const s = agent.skills().find((x) => x.name === name)
+      if (s && s.editable === false) throw new Error(`"${name}" is a shared skill and is read-only here`)
+      writeSkill(path.join(workspace, 'skills'), name, text)
+      changed()
     },
     decide: async (rec, decision) => { ui.decide(rec, decision); changed() },
     mainState: async () => mainState(),

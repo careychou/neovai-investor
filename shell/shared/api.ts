@@ -8,9 +8,10 @@ import type { AppSettings } from '../main/app-settings'
 export type { AgentEvent, Message, Settings, AppSettings, ModelGroup, PanelResult, ScreenState, Decision, Recommendation }
 export type Chat = SessionRow
 
-export interface SkillInfo { name: string; description: string }
+/** source: the folder's label (Workspace, .github/skills, ~/.copilot/skills); editable is false for shared skills. */
+export interface SkillInfo { name: string; description: string; source: string; editable: boolean }
 
-export interface SkillText { name: string; path: string; text: string }
+export interface SkillText { name: string; path: string; text: string; source: string; editable: boolean }
 
 /** The user's preferences (goals.json): any fields the Preferences screen sets. */
 export interface Goals { earningCapPct?: number; lossLimitPct?: number; budget?: number; [key: string]: unknown }
@@ -50,12 +51,15 @@ export interface Api {
   newChat(): Promise<Chat>
   openChat(id: string): Promise<{ messages: Message[]; busy: boolean }>
   deleteChat(id: string): Promise<void>
+  renameChat(id: string, title: string): Promise<void>
   /** Images and files go to the model with the prompt (see the kernel chat-view Composer). */
   send(chatId: string, prompt: string, attachments?: Attachment[]): Promise<SendResult>
   stop(chatId: string): Promise<void>
   listSkills(): Promise<SkillInfo[]>
   /** The full SKILL.md of one skill, read from disk. */
   readSkill(name: string): Promise<SkillText | null>
+  /** Saves a workspace skill's SKILL.md; shared skills cannot be saved. */
+  saveSkill(name: string, text: string): Promise<void>
   /** Records accepting or declining a recommendation in records/data/decisions.json; null undoes it. */
   decide(rec: Recommendation, decision: Decision | null): Promise<void>
   mainState(): Promise<MainState>
@@ -81,7 +85,7 @@ export const PANEL_LIBRARIES = ['recharts', 'lucide-react', 'date-fns'] as const
 
 export const CHANNELS = [
   'info', 'secretsEncrypted', 'getSettings', 'saveSettings', 'listModels', 'getGoals', 'saveGoals',
-  'listChats', 'newChat', 'openChat', 'deleteChat', 'send', 'stop', 'listSkills', 'readSkill', 'decide',
+  'listChats', 'newChat', 'openChat', 'deleteChat', 'renameChat', 'send', 'stop', 'listSkills', 'readSkill', 'saveSkill', 'decide',
   'mainState', 'runJob', 'stopJob', 'loadPanel', 'reportPanelError', 'panelFetch', 'publish'
 ] as const
 export const EVENT_CHANNEL = 'agent-event'

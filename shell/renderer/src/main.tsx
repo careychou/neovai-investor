@@ -7,6 +7,7 @@ import { registerHostModules } from 'neovai-kernel/cards/live-ui/react'
 import { PANEL_LIBRARIES } from '../../shared/api'
 import 'neovai-kernel/cards/chat-view/styles.css'
 import 'neovai-kernel/cards/live-ui/styles.css'
+import 'neovai-kernel/cards/skills/styles.css'
 import App from './App'
 import './styles.css'
 

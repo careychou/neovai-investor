@@ -9,7 +9,7 @@ Not financial advice. The app never places trades or logs in to a brokerage.
 
 ## Status
 
-Version 0.13.0. New in 0.13.0: publish goes straight to the remote repository (Settings › Publish › Repository, e.g. `git@github.com:you/neovai-investor.git`): it downloads the repository into a temporary folder, copies the workspace in, commits, pushes and deletes the folder, so no local working copy is needed (a local folder still works). In 0.12.0: a publish button next to the paperclip in Codify. One click copies the app's workspace into this repository's `workspace/` folder (leaving out run records and your preferences), commits and pushes, and the chat shows each step as it happens. In 0.11.0: Codify and the Main App's runtime agent can hand independent parts of a request to helper agents that run at the same time (for example one per stock); each helper shows as a step you can open to see its own work, nested in the chat, and Codify's helpers can run in the background and report back when done. In 0.10.0: every chat (Codify and run activity) shows tool steps in three levels, a one-line summary, then the steps in plain words, then each step's input and output, and the attach button is a paperclip. In 0.9.0: panels can draw trading-style charts (`chart` block or `<Chart>`: candlesticks, line, area, bars, volume, last-price tag, hover O/H/L/C), fetch live data through the main process (`useFetch`, `fetchJson`), import plain `.css` files and split into many files; Market Scan ships a live symbol chart (`ui/SymbolChart.tsx`) that Codify built. The app has two halves:
+Version 0.14.0. New in 0.14.0: a **Skills** page in the left menu lists every skill the app uses, grouped by where it lives: this app's workspace skills (read and edit them here, or have Codify change them) and shared skills from the project's `.github/skills` and your `~/.copilot/skills` (read-only; both agents can load them by name). Codify's second column is now session history only, and each request can be renamed (pencil or double-click). Both come from kernel v0.14.0 (`SessionList`, `SkillList`, `loadSkillSources`). In 0.13.0: publish goes straight to the remote repository (Settings › Publish › Repository, e.g. `git@github.com:you/neovai-investor.git`): it downloads the repository into a temporary folder, copies the workspace in, commits, pushes and deletes the folder, so no local working copy is needed (a local folder still works). In 0.12.0: a publish button next to the paperclip in Codify. One click copies the app's workspace into this repository's `workspace/` folder (leaving out run records and your preferences), commits and pushes, and the chat shows each step as it happens. In 0.11.0: Codify and the Main App's runtime agent can hand independent parts of a request to helper agents that run at the same time (for example one per stock); each helper shows as a step you can open to see its own work, nested in the chat, and Codify's helpers can run in the background and report back when done. In 0.10.0: every chat (Codify and run activity) shows tool steps in three levels, a one-line summary, then the steps in plain words, then each step's input and output, and the attach button is a paperclip. In 0.9.0: panels can draw trading-style charts (`chart` block or `<Chart>`: candlesticks, line, area, bars, volume, last-price tag, hover O/H/L/C), fetch live data through the main process (`useFetch`, `fetchJson`), import plain `.css` files and split into many files; Market Scan ships a live symbol chart (`ui/SymbolChart.tsx`) that Codify built. The app has two halves:
 
 - **Main App**: one tab per skill, each with its own job: Preferences
   (user-preference, first tab: the user's budget, limits and trading rules, saved to
@@ -41,11 +41,16 @@ Version 0.13.0. New in 0.13.0: publish goes straight to the remote repository (S
   job scores accepted against declined calls, and the next daily run reads them.
 - **Codify**: the coding agent. Tell it how the app should look or behave; it edits
   screens, panels, jobs, skills and logic, checks its UI edits with `check_ui`, and
-  the change shows at once. Click a skill to read it in full. "Improve skills from
-  my picks" asks Codify to study your decisions and the review results and propose
-  skill changes, which it makes only after you agree. Attach screenshots, mockups
+  the change shows at once. The column on its left is your request history: open,
+  rename (pencil or double-click) or delete a request. Attach screenshots, mockups
   or text files to a request with the ＋ button, by pasting, or by dropping them on
   the input (the kernel chat-view `Composer`); images show as thumbnails in the chat.
+- **Skills**: every skill the app can use. "This app" skills live in
+  `workspace/skills/`: read one, Edit it by hand, or "Change with Codify". Shared
+  skills from `.github/skills` (in this repo) and `~/.copilot/skills` are marked
+  read-only; the agents load them on demand, and a workspace skill with the same
+  name wins. "Improve skills from my picks" asks Codify to study your decisions and
+  the review results and propose skill changes, which it makes only after you agree.
 
 See `docs/design.md`.
 
@@ -296,7 +301,7 @@ tag in `kernel.json`.
 
 ```sh
 git clone https://github.com/careychou/neovai-kernel ../neovai-kernel
-git -C ../neovai-kernel checkout v0.13.0
+git -C ../neovai-kernel checkout v0.14.0
 npm install
 npm run build && npx electron .
 ```

@@ -9,7 +9,7 @@ import { shellTools, ShellManager } from 'neovai-kernel/cards/shell'
 import { webFetch } from 'neovai-kernel/cards/web-fetch'
 import { PermissionGate } from 'neovai-kernel/cards/approval'
 import { Store, type SessionRow } from 'neovai-kernel/cards/session-store'
-import { loadSkills, makeSkillTool, skillsPrompt, type Skill } from 'neovai-kernel/cards/skills'
+import { loadSkillSources, makeSkillTool, skillsPrompt, type Skill, type SkillSource } from 'neovai-kernel/cards/skills'
 import { loadJobs } from 'neovai-kernel/cards/runtime-agent'
 import { SubAgents } from 'neovai-kernel/cards/sub-agents'
 import { BLOCK_TYPES, makeCheckUiTool, type LiveUi } from 'neovai-kernel/cards/live-ui'
@@ -39,6 +39,8 @@ export interface AgentOptions {
   onEvent: (chatId: string, e: AgentEvent) => void
   /** The live screens, so the agent can check its UI edits. */
   ui?: LiveUi
+  /** Shared skill folders the agent may use but not change, after the workspace's own. */
+  sharedSkills?: () => SkillSource[]
 }
 
 export interface Agent {
@@ -48,14 +50,17 @@ export interface Agent {
   /** Saved messages of a chat, without the system prompt. */
   openChat(id: string): Message[]
   deleteChat(id: string): void
+  renameChat(id: string, title: string): void
   send(chatId: string, prompt: string, attachments?: Attachment[]): Promise<SendResult>
   stop(chatId: string): void
   isBusy(chatId: string): boolean
   /** Adds finished turns (such as a publish run's steps) to a chat and saves it. */
   append(chatId: string, messages: Message[]): void
   systemPrompt(): string
-  /** The workspace skills, read from disk on every call. */
+  /** Every skill: the workspace's (editable) then the shared ones (read-only), read from disk on every call. */
   skills(): Skill[]
+  /** The workspace skills folder, then the shared folders. */
+  skillSources(): SkillSource[]
   dispose(): void
 }
 
@@ -109,7 +114,8 @@ export function createAgent(o: AgentOptions): Agent {
   const store = new Store(o.dataDir)
   const shells = new ShellManager()
   const skillsDir = path.join(o.workspace, 'skills')
-  const tools: ToolDef[] = [...makeFileTools({ root: o.workspace, readOnly: READ_ONLY }), ...shellTools, webFetch, makeSkillTool({ dir: skillsDir })]
+  const skillSources = (): SkillSource[] => [{ dir: skillsDir, label: 'Workspace', editable: true }, ...(o.sharedSkills?.() ?? [])]
+  const tools: ToolDef[] = [...makeFileTools({ root: o.workspace, readOnly: READ_ONLY }), ...shellTools, webFetch, makeSkillTool({ sources: skillSources })]
   if (o.ui) tools.push(makeCheckUiTool(o.ui))
   const sessions = new Map<string, Session>()
 
@@ -117,7 +123,7 @@ export function createAgent(o: AgentOptions): Agent {
     BASE_PROMPT,
     PLAIN_LANGUAGE_RULES,
     `# Instructions\n${readText(path.join(o.workspace, 'instructions', 'system.md')) || '(none yet)'}`,
-    `# Skills\n${skillsPrompt(loadSkills(skillsDir))}`,
+    `# Skills (workspace skills/ first; shared ones are read-only, outside the workspace)\n${skillsPrompt(loadSkillSources(skillSources()))}`,
     `# Jobs\n${loadJobs(path.join(o.workspace, 'jobs')).map((j) => `- ${j.name}: ${j.description}`).join('\n') || '(none yet)'}`,
     `# Preferences (goals.json, read-only)\n${readText(path.join(o.workspace, 'goals.json')) || '(not set)'}`,
     `# Environment\n- Workspace: ${o.workspace}\n- Platform: ${os.platform()} ${os.arch()}\n- Date: ${new Date().toISOString().slice(0, 10)}`
@@ -166,7 +172,8 @@ export function createAgent(o: AgentOptions): Agent {
   return {
     store,
     systemPrompt,
-    skills: () => loadSkills(skillsDir),
+    skills: () => loadSkillSources(skillSources()),
+    skillSources,
     listChats: () => store.listSessions(),
     newChat() {
       const now = Date.now()
@@ -179,6 +186,10 @@ export function createAgent(o: AgentOptions): Agent {
       sessions.get(id)?.stop()
       sessions.delete(id)
       store.deleteSession(id)
+    },
+    renameChat(id, title) {
+      const t = title.replace(/\s+/g, ' ').trim().slice(0, 120)
+      if (t && store.getSession(id)) store.updateSession(id, { title: t })
     },
     async send(chatId, prompt, attachments = []) {
       const session = sessionFor(chatId)

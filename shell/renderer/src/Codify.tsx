@@ -1,33 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Chat as ChatRow, ScreenState, SkillInfo, SkillText } from '../../shared/api'
+import type { Chat as ChatRow } from '../../shared/api'
 import { applyEvent, fromMessages, type Attachment, type Item } from 'neovai-kernel/cards/chat-view'
-import { Composer, MessageList } from 'neovai-kernel/cards/chat-view/react'
+import { Composer, MessageList, SessionList } from 'neovai-kernel/cards/chat-view/react'
 import Markdown from './Markdown'
 
-const LEARN = 'Look at the picks I accepted and declined (records/data/decisions.json) and how past picks did (records/data/review.json and the Outcome sections in records/). Tell me what patterns you see in what I take, what I skip, and what worked. Then propose specific changes to the skills, each with the reason and the evidence. Make a change only after I agree.'
+/** A screen or the Skills page asking Codify for a change. `prompt` is used as is; otherwise the request is about `screen`. `at` makes each click a new request. */
+export interface CodifyRequest { screen?: string; title?: string; text?: string; prompt?: string; at: number }
 
-/** A screen asking Codify to change it or one of its skills. `at` makes each click a new request. */
-export interface CodifyRequest { screen: string; title: string; skill?: string; text?: string; at: number }
-
-const screenAsk = (r: { screen: string; title: string; text?: string }) => `On the ${r.title} screen (ui/screens/${r.screen}.json), ${r.text ?? ''}`
+export const screenAsk = (r: { screen: string; title: string; text?: string }) => `On the ${r.title} screen (ui/screens/${r.screen}.json), ${r.text ?? ''}`
 
 /** Where the user tells the agent how the app should behave. */
-export default function Codify({ request, screens = [] }: { request?: CodifyRequest | null; screens?: ScreenState[] }) {
+export default function Codify({ request }: { request?: CodifyRequest | null }) {
   const [chats, setChats] = useState<ChatRow[]>([])
   const [active, setActive] = useState<string | null>(null)
   const [items, setItems] = useState<Record<string, Item[]>>({})
   const [busy, setBusy] = useState<Record<string, boolean>>({})
   const [draft, setDraft] = useState('')
-  const [skills, setSkills] = useState<SkillInfo[]>([])
-  const [viewing, setViewing] = useState<SkillText | null>(null)
   const box = useRef<HTMLTextAreaElement>(null)
   const bottom = useRef<HTMLDivElement>(null)
   const busyRef = useRef(busy)
   busyRef.current = busy
 
   const refresh = useCallback(() => {
-    // The agent may have added or changed a skill during the run.
-    window.api.listSkills().then(setSkills).catch(() => {})
     return window.api.listChats().then(setChats)
   }, [])
 
@@ -73,17 +67,14 @@ export default function Codify({ request, screens = [] }: { request?: CodifyRequ
     refresh()
   }
 
-  const ask = (text: string) => { setDraft(text); setViewing(null); setTimeout(() => box.current?.focus()) }
-  const openSkill = async (name: string) => setViewing(await window.api.readSkill(name))
-  // A screen's "Change this screen" prefills a request about it; a skill chip opens that skill.
+  const rename = async (id: string, title: string) => { await window.api.renameChat(id, title); refresh() }
+
+  const ask = (text: string) => { setDraft(text); setTimeout(() => box.current?.focus()) }
+  // A screen's "Change this screen" or a skill's "Change with Codify" prefills a request.
   useEffect(() => {
     if (!request) return
-    if (request.skill) void openSkill(request.skill)
-    else ask(screenAsk(request))
+    ask(request.prompt ?? (request.screen ? screenAsk({ screen: request.screen, title: request.title ?? request.screen, text: request.text }) : request.text ?? ''))
   }, [request])
-  const screensOf = (skill: string) => screens.filter((s) => s.screen?.skills?.includes(skill))
-  // Reload an open skill when a run changes it.
-  useEffect(() => { if (viewing && !running) window.api.readSkill(viewing.name).then((v) => v && setViewing(v)) }, [running, skills])
 
   const [publishing, setPublishing] = useState(false)
   // Commits and pushes the workspace; the steps stream into the chat like any run.
@@ -133,46 +124,17 @@ export default function Codify({ request, screens = [] }: { request?: CodifyRequ
   return (
     <div className="chat">
       <aside className="chatlist">
-        <button className="primary" onClick={newChat}>New request</button>
-        {chats.map((c) => (
-          <div key={c.id} className={c.id === active ? 'chatrow active' : 'chatrow'} onClick={() => select(c.id)}>
-            <span className="chattitle">{!c.title || c.title === 'New chat' ? 'New request' : c.title}</span>
-            <button className="x" title="Delete request" onClick={(ev) => { ev.stopPropagation(); remove(c.id) }}>×</button>
-          </div>
-        ))}
-        <div className="skills">
-          <button className="learn" title="Codify reads your accepted and declined picks and the performance review, then proposes skill changes" onClick={() => ask(LEARN)}>Improve skills from my picks</button>
-          <div className="skillshead">Skills</div>
-          {skills.length === 0 && <div className="muted small">No skills yet.</div>}
-          {skills.map((s) => (
-            <button
-              key={s.name}
-              className={viewing?.name === s.name ? 'skillrow active' : 'skillrow'}
-              title={`${s.description}\n\nClick to read it.`}
-              onClick={() => openSkill(s.name)}
-            >
-              <b>{s.name}</b>
-              <span>{s.description}</span>
-            </button>
-          ))}
-        </div>
+        <SessionList
+          sessions={chats.map((c) => ({ id: c.id, title: c.title, busy: !!busy[c.id] }))}
+          active={active}
+          onSelect={(id) => void select(id)}
+          onRename={(id, t) => void rename(id, t)}
+          onDelete={(id) => void remove(id)}
+          onNew={() => void newChat()}
+        />
       </aside>
       <section className="thread">
-        {viewing && (
-          <div className="skillview">
-            <div className="skillviewhead">
-              <b>{viewing.name}</b><span className="muted small">{viewing.path}</span>
-              <span className="grow" />
-              {screensOf(viewing.name).map((s) => (
-                <button key={s.name} title={`Change how the ${s.title} screen shows this skill's results`} onClick={() => ask(screenAsk({ screen: s.name, title: s.title }))}>Change the {s.title} screen</button>
-              ))}
-              <button className="primary" onClick={() => ask(`Change the ${viewing.name} skill: `)}>Change this skill</button>
-              <button onClick={() => setViewing(null)}>Close</button>
-            </div>
-            <div className="skillviewbody"><Markdown text={viewing.text.replace(/^---[\s\S]*?\n---\n/, '')} /></div>
-          </div>
-        )}
-        <div className="messages" hidden={!!viewing}>
+        <div className="messages">
           {list.length === 0 && (
             <p className="muted empty">Say how the app should look or behave. Codify changes the screens, jobs, skills and code in the workspace, and the change shows at once.</p>
           )}
