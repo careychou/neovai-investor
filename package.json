@@ -39,6 +39,9 @@
   "build": {
     "appId": "dev.careychou.neovai-investor",
     "productName": "Neovai Investor",
+    "directories": {
+      "buildResources": "build"
+    },
     "files": [
       "out/**"
     ],
@@ -53,6 +56,7 @@
       }
     ],
     "mac": {
+      "icon": "build/icon.icns",
       "target": [
         {
           "target": "dmg",

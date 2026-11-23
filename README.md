@@ -86,6 +86,9 @@ or Vertex), pick a default model and save.
 
 ## Install as a Mac app
 
+The app icon is `build/icon.svg` (a neon "N" drawn as a rising stock line); `build/icon.png` and `build/icon.icns` are rendered from it.
+
+
 ```sh
 npm run dist
 ```
