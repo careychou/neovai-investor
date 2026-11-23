@@ -1,31 +1,78 @@
 ---
-description: Check past recommendations against today's prices and say what to change in the skills.
+description: Check past recommendations against today's prices, keep the account ledger (holdings, closed trades, account summary) and say what to change in the skills.
 order: 5
 ---
 # Performance review
 
-Input: every file in `records/` and today's live prices.
+Input: `records/data/decisions.json`, every file in `records/`, `goals.json` and today's live prices.
 
-## Steps
+## 1. Build the account ledger from decisions.json
 
-1. Read `records/data/decisions.json`: score accepted calls as the user's real results, and declined calls separately as what was skipped.
-2. Read the record files. List each recommendation with its date, action, ticker, entry, target and stop.
-3. Get today's price for each ticker, with source and time.
-4. Mark each recommendation:
-   - Win: the target was reached before the stop.
-   - Loss: the stop was reached first.
-   - Open: neither yet. Give the gain or loss so far in percent.
-5. Add it up: number of wins, losses and open calls, win rate, average gain, average loss and the total result in dollars against the budget.
+`records/data/decisions.json` is the only source of truth for what the user holds. Only **accepted** calls count. Declined calls are not trades.
 
-## Monitor open positions
+Go through the accepted items in time order (`at`, then `date`):
 
-For each accepted Buy still open, give the current price, the gain or loss, how far it is from the target and the stop, and one line on what to watch next (an earnings date, a level, news).
+- **Buy**: opens a lot. Keep: ticker, buy date (`date` of the decision; use `at` if `date` is missing), shares, entry price (`entry` on the call), stop, target, decision `id`.
+  - Shares: use `shares` on the decision. If it is missing, use `shares` from the matching call in `records/data/picks.json` or the record file of that date. If that is missing too, use floor(per-stock cap / entry), with the cap from `maxPerStockUsd` in `goals.json`. Never invent a share count when entry is also missing; list the lot with "no data".
+  - Adding to a ticker you already hold makes a separate lot. In the holdings, combine lots of one ticker into one row: shares added up, entry = the share-weighted average cost, buy date = the earliest lot.
+- **Sell part**: closes the shares on the call (or half the held shares, rounded down, if not given), oldest lot first (FIFO).
+- **Sell all**: closes every share of that ticker, oldest lot first.
+- **Change**: updates the stop and/or target of the open position. It is not a trade.
+- **Exit price** of a sell: the price on the accepted sell call (`entry` or `price` field). If missing, the closing price on the day it was accepted, with source. If neither is known, write "no data" and leave it out of the totals; never guess.
+- A position whose price passed its stop or target stays open until the user accepts a sell. Flag it in `watch` and in the summary instead.
 
-## What to learn
+Each closed part becomes one closed trade: ticker, buy date, sell date, shares, entry, exit, realized $ = (exit − entry) × shares, realized % = (exit − entry) / entry × 100, days held.
+
+## 2. Get prices
+
+For every open ticker get the current price and the previous close, with source and time. If you cannot get a price, set it to null and write "no data". Never guess a price.
+
+## 3. Compute holdings
+
+For each open ticker:
+- market value = shares × current price
+- cost basis = shares × entry
+- unrealized $ = market value − cost basis; unrealized % = (price − entry) / entry × 100
+- day change $ = shares × (price − previous close); if bought today, use shares × (price − entry). Day change % = (price − previous close) / previous close × 100.
+- days held = calendar days from the buy date to today (0 on the buy day)
+- distance to stop and target in percent, and one line on what to watch next (earnings date, a level, news, or "below stop: sell call due").
+
+## 4. Compute the account summary
+
+Budget = the stricter of `goals.json` budget and the user-preference rule ($10,000).
+
+- invested = sum of cost basis of open holdings
+- market value = sum of market value of open holdings (if a price is missing, use cost basis for that holding and say so)
+- realized profit = sum of realized $ of all closed trades
+- unrealized profit = sum of unrealized $ of open holdings
+- cash = budget − invested + realized profit
+- total value = cash + market value
+- total profit $ = realized + unrealized; total profit % = total profit $ / budget × 100
+- goal: `overallProfitPct` (from `goals.json`, default 10) % of budget. Progress = total profit $ / goal $ × 100.
+- win rate = closed trades with realized $ > 0 / all closed trades (a trade that breaks even is not a win). Write "n/a" when there are no closed trades.
+- today's change $ = sum of day change $ of open holdings + for trades closed today (exit − previous close) × shares. Today's change % = today's change $ / (total value − today's change $) × 100.
+- week P&L = the same over the last 5 sessions, for the weekly loss limit.
+
+Round dollars to cents and percents to two decimals. Check: total value − budget must equal total profit $.
+
+## 5. Goal progress and limits
+
+Track the user's overall goal from `user-preference`: `overallProfitPct` profit on the whole budget. Say whether it is reached. Give today's and this week's P&L against the daily ($200) and weekly ($500) loss limits, and say plainly if either limit is hit. Flag any holding that breaks a rule: down more than 2%, up more than 20%, or cost basis over the per-stock cap (`maxPerStockUsd`).
+
+## 6. Score the calls
+
+Read the record files and list each recommendation with its date, action, ticker, entry, target and stop. Mark each one:
+- Win: the target was reached before the stop.
+- Loss: the stop was reached first.
+- Open: neither yet. Give the gain or loss so far in percent.
+
+Score accepted calls as the user's real results, and declined calls separately as what was skipped.
+
+## 7. What to learn
 
 - What worked: patterns shared by the wins (sector, setup, time of day, market mood).
 - What did not: patterns shared by the losses.
-- Your choices: how the accepted calls did against the declined ones, and whether the user's picks beat the full list.
+- Your choices: how the accepted calls did against the declined ones.
 - Suggested changes: name the skill and the exact rule to change, and why. Base each one on at least three recommendations, not on a single result.
 
 Offer the changes to the user. Edit a skill only after the user agrees.
@@ -34,4 +81,4 @@ Offer the changes to the user. Edit a skill only after the user agrees.
 
 Add an "Outcome" section to each record file that was reviewed, with the date of the review. Never change the original recommendation text.
 
-If `records/` holds no recommendations yet, say so and stop.
+If there are no accepted decisions yet, still save the account with zero positions (cash = budget, total value = budget) and say so.

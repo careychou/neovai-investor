@@ -2,21 +2,33 @@
   "title": "Preferences",
   "order": 0,
   "skills": [
-    "user-preference"
+    "user-preference",
+    "performance-review"
   ],
   "blocks": [
     {
       "type": "heading",
-      "text": "Preferences"
+      "text": "My trading rules"
+    },
+    {
+      "type": "panel",
+      "file": "ui/PreferencesForm.tsx"
+    },
+    {
+      "type": "row",
+      "blocks": [
+        { "type": "run", "job": "review", "label": "Update goal progress" },
+        { "type": "run", "job": "preferences", "label": "Check my rules" }
+      ]
     },
     {
       "type": "panel",
       "file": "ui/Preferences.tsx"
     },
     {
-      "type": "run",
-      "job": "preferences",
-      "label": "Summarize my preferences"
+      "type": "alerts",
+      "title": "Rule status right now",
+      "data": "preferences.status"
     },
     {
       "type": "markdown",
@@ -24,22 +36,9 @@
     },
     {
       "type": "table",
-      "title": "Considerations",
-      "data": "preferences.considerations",
-      "columns": [
-        "area",
-        "rule",
-        "from"
-      ]
-    },
-    {
-      "type": "table",
       "title": "Learned from your decisions",
       "data": "preferences.learned",
-      "columns": [
-        "pattern",
-        "evidence"
-      ]
+      "columns": ["pattern", "evidence"]
     },
     {
       "type": "list",
@@ -48,7 +47,7 @@
     },
     {
       "type": "skill",
-      "title": "The user-preference skill",
+      "title": "The user-preference skill (what every job follows)",
       "name": "user-preference"
     }
   ]

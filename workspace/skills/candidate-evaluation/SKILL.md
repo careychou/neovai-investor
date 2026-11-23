@@ -22,9 +22,10 @@ Input: the watch list from `market-scan` (`records/data/market.json` when an ear
 
 ## Set the thresholds
 
-- Upside target: a realistic price for the holding period, never more than `earningCapPct` above the entry.
-- Downside stop: below a recent low, never more than `lossLimitPct` below the entry.
+- Upside target: a realistic price for the holding period (usually intraday), at least +3% (rule 17 in `user-preference`) and never more than 20% or `earningCapPct` above the entry, whichever is lower.
+- Downside stop: below a recent low, never more than 2% below the entry (or `lossLimitPct` if that is smaller). If the natural stop is more than 2% away, drop the ticker.
 - Reward to risk: upside divided by downside. Keep the ticker only when it is 1.5 or more.
+- Liquidity: drop it if the price is under $5 or the average volume is under 1,000,000 shares.
 
 ## Output
 

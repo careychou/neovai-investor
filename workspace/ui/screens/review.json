@@ -6,52 +6,26 @@
   ],
   "blocks": [
     {
-      "type": "heading",
-      "text": "Performance review"
+      "type": "row",
+      "blocks": [
+        {
+          "type": "heading",
+          "text": "Account"
+        },
+        {
+          "type": "run",
+          "job": "review",
+          "label": "Update account"
+        }
+      ]
     },
     {
-      "type": "run",
-      "job": "review",
-      "label": "Review and monitor"
+      "type": "panel",
+      "file": "ui/Portfolio.tsx"
     },
     {
       "type": "markdown",
       "data": "review.summary"
-    },
-    {
-      "type": "metrics",
-      "data": "review.metrics"
-    },
-    {
-      "type": "table",
-      "title": "Open positions",
-      "data": "review.positions",
-      "columns": [
-        "ticker",
-        "since",
-        "shares",
-        "entry",
-        "now",
-        "result",
-        "target",
-        "stop",
-        "watch"
-      ]
-    },
-    {
-      "type": "table",
-      "title": "Outcomes",
-      "data": "review.outcomes",
-      "columns": [
-        "date",
-        "ticker",
-        "action",
-        "decision",
-        "entry",
-        "now",
-        "result",
-        "status"
-      ]
     },
     {
       "type": "table",
@@ -65,7 +39,7 @@
     },
     {
       "type": "report",
-      "title": "Last report",
+      "title": "Last review report",
       "job": "review"
     }
   ]

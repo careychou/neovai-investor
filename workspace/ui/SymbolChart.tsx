@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useApp, useFetch, usePanelState, Chart } from '@neovai/panel'
 
 type RangeKey = '1D' | '5D' | '1M' | '6M' | '1Y'
@@ -39,18 +39,48 @@ function label(ts: number, intraday: boolean) {
   return intraday ? `${day} ${pad(d.getHours())}:${pad(d.getMinutes())}` : day
 }
 
+const MARKET = ['SPY', 'QQQ', 'DIA', 'IWM', 'VIX', 'TLT', 'GLD', 'USO', 'BTC-USD']
+const MARKET_SYMBOL: Record<string, string> = { VIX: '^VIX' }
+const clean = (s: string) => s.trim().toUpperCase().replace(/[^A-Z0-9.\-^=]/g, '')
+
 export default function SymbolChart() {
   const { get } = useApp()
   const decisions = (get('decisions.items') as any[]) ?? []
-  const tickers = useMemo(() => holdingTickers(Array.isArray(decisions) ? decisions : []), [decisions])
+  const watchRaw = get('market.watch') as any[]
+  const [custom, setCustom] = usePanelState<string[]>('symbolChart.custom', [])
+  const [draft, setDraft] = useState('')
+
+  const groups = useMemo(() => {
+    const seen = new Set<string>()
+    const take = (list: string[]) => list.map(clean).filter((t) => t && !seen.has(t) && (seen.add(t), true))
+    const held = take(holdingTickers(Array.isArray(decisions) ? decisions : []).filter((t) => t !== 'SPY'))
+    const market = take(MARKET)
+    const watch = take((Array.isArray(watchRaw) ? watchRaw : []).map((w) => String(w?.ticker ?? '')))
+    const mine = take(custom ?? [])
+    return [
+      { label: 'My holdings', items: held },
+      { label: 'Market', items: market },
+      { label: 'Scan watch list', items: watch },
+      { label: 'Added by me', items: mine },
+    ].filter((g) => g.items.length)
+  }, [decisions, watchRaw, custom])
+  const tickers = useMemo(() => groups.flatMap((g) => g.items), [groups])
 
   const [picked, setPicked] = usePanelState<string>('symbolChart.ticker', tickers[0] ?? 'SPY')
+  const addSymbol = () => {
+    const t = clean(draft)
+    if (!t) return
+    if (!tickers.includes(t)) setCustom([...(custom ?? []), t])
+    setPicked(t)
+    setDraft('')
+  }
+  const isCustom = (custom ?? []).map(clean).includes(picked) && tickers.includes(picked)
   const [rangeKey, setRangeKey] = usePanelState<RangeKey>('symbolChart.range', '6M')
   const ticker = tickers.includes(picked) ? picked : tickers[0]
   const r = RANGES[rangeKey] ?? RANGES['6M']
   const intraday = r.interval.endsWith('m') || r.interval.endsWith('h')
 
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=${r.range}&interval=${r.interval}`
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(MARKET_SYMBOL[ticker] ?? ticker)}?range=${r.range}&interval=${r.interval}`
   const { data, error, loading } = useFetch(url, 60)
 
   const parsed = useMemo(() => {
@@ -86,10 +116,38 @@ export default function SymbolChart() {
           onChange={(e) => setPicked(e.target.value)}
           style={{ fontSize: 15, fontWeight: 700, padding: '4px 8px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--panel)', color: 'var(--text)' }}
         >
-          {tickers.map((t) => (
-            <option key={t} value={t}>{t}</option>
+          {groups.map((g) => (
+            <optgroup key={g.label} label={g.label}>
+              {g.items.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
+
+        <form
+          onSubmit={(e) => { e.preventDefault(); addSymbol() }}
+          style={{ display: 'flex', gap: 4 }}
+        >
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Add symbol…"
+            style={{ width: 110, fontSize: 13, padding: '4px 8px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--panel)', color: 'var(--text)' }}
+          />
+          <button type="submit" className="button" style={{ padding: '3px 10px', fontSize: 12 }}>Add</button>
+          {isCustom && (
+            <button
+              type="button"
+              className="button"
+              title={`Remove ${ticker} from the list`}
+              onClick={() => { setCustom((custom ?? []).filter((t) => clean(t) !== ticker)); setPicked('SPY') }}
+              style={{ padding: '3px 10px', fontSize: 12 }}
+            >
+              Remove
+            </button>
+          )}
+        </form>
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, fontVariantNumeric: 'tabular-nums' }}>
           <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>

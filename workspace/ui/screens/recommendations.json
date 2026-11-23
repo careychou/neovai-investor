@@ -2,6 +2,9 @@
   "title": "Recommendations",
   "order": 3,
   "skills": [
+    "user-preference",
+    "market-scan",
+    "candidate-evaluation",
     "recommendation"
   ],
   "blocks": [
@@ -10,64 +13,8 @@
       "text": "Recommendations"
     },
     {
-      "type": "row",
-      "blocks": [
-        {
-          "type": "run",
-          "job": "recommend",
-          "label": "Refresh recommendations"
-        },
-        {
-          "type": "run",
-          "job": "daily",
-          "label": "Full run (scan, evaluate, recommend)"
-        }
-      ]
-    },
-    {
-      "type": "markdown",
-      "data": "picks.summary"
-    },
-    {
-      "type": "recommendations",
-      "title": "New stocks",
-      "data": "picks.buys",
-      "decide": true
-    },
-    {
-      "type": "recommendations",
-      "title": "Sell",
-      "data": "picks.sells",
-      "decide": true
-    },
-    {
-      "type": "recommendations",
-      "title": "Change",
-      "data": "picks.changes",
-      "decide": true
-    },
-    {
-      "type": "markdown",
-      "data": "picks.cash"
-    },
-    {
-      "type": "table",
-      "title": "Your decisions",
-      "data": "decisions.items",
-      "columns": [
-        "date",
-        "ticker",
-        "action",
-        "decision",
-        "entry",
-        "target",
-        "stop"
-      ]
-    },
-    {
-      "type": "report",
-      "title": "Last report",
-      "job": "recommend"
+      "type": "panel",
+      "file": "ui/RecommendationsPanel.tsx"
     }
   ]
 }
