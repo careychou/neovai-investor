@@ -3,7 +3,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import type { ChatRequest, Delta, ModelAdapter } from 'neovai-kernel/cards/agent-loop'
-import { createLiveUi } from 'neovai-kernel/cards/live-ui'
+import { createLiveUi, DEFAULT_EXTERNALS } from 'neovai-kernel/cards/live-ui'
+import { PANEL_LIBRARIES } from '../shell/shared/api'
 import { createRuntime } from 'neovai-kernel/cards/runtime-agent'
 import { createAgent } from '../shell/main/agent'
 import { runtimeModelOf } from '../shell/main/app-settings'
@@ -14,7 +15,7 @@ afterEach(() => { if (tmp) fs.rmSync(tmp, { recursive: true, force: true }) })
 
 describe('shipped workspace', () => {
   it('has screens and panels that load, and jobs for every run block', () => {
-    const ui = createLiveUi({ workspace: bundled })
+    const ui = createLiveUi({ workspace: bundled, externals: [...DEFAULT_EXTERNALS, ...PANEL_LIBRARIES] })
     expect(ui.check()).toMatch(/^OK: preferences, today, candidates, recommendations, review/)
     // Every screen names the skills it is built on, and each shipped skill has a screen.
     const skills = fs.readdirSync(path.join(bundled, 'skills'))

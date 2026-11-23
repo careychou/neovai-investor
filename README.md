@@ -9,7 +9,7 @@ Not financial advice. The app never places trades or logs in to a brokerage.
 
 ## Status
 
-Version 0.12.1. New in 0.12.0: a publish button next to the paperclip in Codify. One click copies the app's workspace into this repository's `workspace/` folder (leaving out run records and your preferences), commits and pushes, and the chat shows each step as it happens (set the repository folder under Settings › Publish). In 0.11.0: Codify and the Main App's runtime agent can hand independent parts of a request to helper agents that run at the same time (for example one per stock); each helper shows as a step you can open to see its own work, nested in the chat, and Codify's helpers can run in the background and report back when done. In 0.10.0: every chat (Codify and run activity) shows tool steps in three levels, a one-line summary, then the steps in plain words, then each step's input and output, and the attach button is a paperclip. In 0.9.0: panels can draw trading-style charts (`chart` block or `<Chart>`: candlesticks, line, area, bars, volume, last-price tag, hover O/H/L/C), fetch live data through the main process (`useFetch`, `fetchJson`), import plain `.css` files and split into many files; Market Scan ships a live symbol chart (`ui/SymbolChart.tsx`) that Codify built. The app has two halves:
+Version 0.13.0. New in 0.13.0: publish goes straight to the remote repository (Settings › Publish › Repository, e.g. `git@github.com:you/neovai-investor.git`): it downloads the repository into a temporary folder, copies the workspace in, commits, pushes and deletes the folder, so no local working copy is needed (a local folder still works). In 0.12.0: a publish button next to the paperclip in Codify. One click copies the app's workspace into this repository's `workspace/` folder (leaving out run records and your preferences), commits and pushes, and the chat shows each step as it happens. In 0.11.0: Codify and the Main App's runtime agent can hand independent parts of a request to helper agents that run at the same time (for example one per stock); each helper shows as a step you can open to see its own work, nested in the chat, and Codify's helpers can run in the background and report back when done. In 0.10.0: every chat (Codify and run activity) shows tool steps in three levels, a one-line summary, then the steps in plain words, then each step's input and output, and the attach button is a paperclip. In 0.9.0: panels can draw trading-style charts (`chart` block or `<Chart>`: candlesticks, line, area, bars, volume, last-price tag, hover O/H/L/C), fetch live data through the main process (`useFetch`, `fetchJson`), import plain `.css` files and split into many files; Market Scan ships a live symbol chart (`ui/SymbolChart.tsx`) that Codify built. The app has two halves:
 
 - **Main App**: one tab per skill, each with its own job: Preferences
   (user-preference, first tab: the user's budget, limits and trading rules, saved to
@@ -95,7 +95,7 @@ flowchart LR
     SUB["sub-agents<br/>task, read_agent: parallel<br/>and background helpers"]
     LU["live-ui<br/>screens, panel compiler, check_ui,<br/>decide, panelFetch"]
     CV["chat-view<br/>view model"]
-    GP["git-publish<br/>mirror, commit, push"]
+    GP["git-publish<br/>download, mirror,<br/>commit, push"]
   end
 
   WS[("workspace/<br/>instructions, skills, jobs,<br/>ui/screens, ui/*.tsx, records, goals.json")]
@@ -134,8 +134,8 @@ flowchart LR
    rebuilt each turn from `instructions/system.md`, the skills, the jobs and the preferences. Each chat also gets
    a `SubAgents` (sub-agents card) attached to its session: the `task` tool runs helpers in parallel or in the
    background, Stop cancels them all, and a finished background helper wakes the chat (`session.notify`).
-6. **Publish**: the `publish` handler calls `publish()` (git-publish card) with the Settings repository folder;
-   it mirrors the workspace into the repository's `workspace/`, commits and pushes, sends each step to the window
+6. **Publish**: the `publish` handler calls `publish()` (git-publish card) with the Settings repository; for a
+   remote address it downloads it into a temporary folder (deleted afterwards), mirrors the workspace into its `workspace/`, commits and pushes, sends each step to the window
    as Codify chat events, and saves the steps into that chat (`agent.append`).
 7. **Bridge**: a handler map typed by `shared/api.ts` is registered with `ipcMain.handle` for every channel;
    `preload` exposes the same channels as `window.api`.
@@ -296,7 +296,7 @@ tag in `kernel.json`.
 
 ```sh
 git clone https://github.com/careychou/neovai-kernel ../neovai-kernel
-git -C ../neovai-kernel checkout v0.12.1
+git -C ../neovai-kernel checkout v0.13.0
 npm install
 npm run build && npx electron .
 ```

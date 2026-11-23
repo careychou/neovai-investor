@@ -32,6 +32,9 @@ const FALLBACK: Record<string, Screen> = {
 /** What publish leaves out of the repo: run output, the user's own preferences and build caches. */
 const PUBLISH_EXCLUDE = ['records/**', '!records/README.md', 'goals.json', '.seeded.json', '.vite/**', '**/.DS_Store', 'node_modules/**']
 
+/** A git address (git@host:me/app.git, https://…, ssh://…, file://…) rather than a folder on this computer. */
+const isRemote = (s: string) => /^[\w.-]+@[\w.-]+:|^[a-z+]+:\/\//i.test(s)
+
 function repoRoot(): string {
   return app.isPackaged ? process.resourcesPath : app.getAppPath()
 }
@@ -172,14 +175,16 @@ app.whenReady().then(() => {
       if (agent.isBusy(chatId)) return { status: 'refused', text: 'Wait for Codify to finish, then publish.' }
       publishing = true
       try {
-        const repo = settings.publishRepo || (app.isPackaged ? '' : repoRoot())
+        const target = (settings.publishRepo || '').trim()
+        const repo = target || (app.isPackaged ? '' : repoRoot())
+        const remote = isRemote(repo)
         const ask: Message = { role: 'user', content: 'Publish my changes to the repository.' }
         const r = await publish({
-          repo,
-          mirror: repo ? { from: workspace, to: path.join(repo, 'workspace'), exclude: PUBLISH_EXCLUDE } : undefined,
+          ...(remote ? { url: repo } : { repo }),
+          mirror: repo ? { from: workspace, to: 'workspace', exclude: PUBLISH_EXCLUDE } : undefined,
           onEvent: (e) => win?.webContents.send(EVENT_CHANNEL, chatId, e)
         })
-        const text = !repo ? 'Set the repository folder under Settings › Publish, then try again.' : r.text
+        const text = !repo ? 'Set the repository under Settings › Publish, then try again.' : r.text
         agent.append(chatId, [ask, ...(repo ? r.messages : [{ role: 'assistant', content: text } as Message])])
         return { status: r.status, text }
       } finally { publishing = false }
