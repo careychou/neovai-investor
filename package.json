@@ -1,6 +1,6 @@
 {
   "name": "neovai-investor",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "private": true,
   "description": "Neovai Investor: a daily stock-pick assistant that whose screens, jobs and skills change live through its Codify agent.",
   "main": "out/main/index.js",

@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, shell } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
-import type { ChatRequest, ModelAdapter } from 'neovai-kernel/cards/agent-loop'
+import type { ChatRequest, Message, ModelAdapter } from 'neovai-kernel/cards/agent-loop'
 import { setToolLimits } from 'neovai-kernel/cards/agent-loop'
 import { ProviderRouter } from 'neovai-kernel/cards/model-providers'
 import { createSettings, type SecretBox } from 'neovai-kernel/cards/settings'
@@ -11,6 +11,7 @@ import { createLiveUi, DEFAULT_EXTERNALS, panelFetch, type LiveUi, type Screen }
 import { createAgent, type Agent } from './agent'
 import { loadGoals, saveGoals } from './goals'
 import { seedWorkspace } from './seed'
+import { publish } from 'neovai-kernel/cards/git-publish'
 import { APP_DEFAULTS, runtimeModelOf, type AppSettings } from './app-settings'
 import { CHANGED_CHANNEL, CHANNELS, PANEL_LIBRARIES, EVENT_CHANNEL, RUN_EVENT_CHANNEL, type Api, type AppInfo, type MainState } from '../shared/api'
 
@@ -27,6 +28,9 @@ let ui: LiveUi
 const FALLBACK: Record<string, Screen> = {
   today: { title: 'Today', order: 1, blocks: [{ type: 'heading', text: 'Today' }, { type: 'markdown', text: 'This workspace has no screens yet. Ask Codify to add one in ui/screens.' }] }
 }
+
+/** What publish leaves out of the repo: run output, the user's own preferences and build caches. */
+const PUBLISH_EXCLUDE = ['records/**', '!records/README.md', 'goals.json', '.seeded.json', '.vite/**', '**/.DS_Store', 'node_modules/**']
 
 function repoRoot(): string {
   return app.isPackaged ? process.resourcesPath : app.getAppPath()
@@ -120,6 +124,7 @@ app.whenReady().then(() => {
     }
   }
 
+  let publishing = false
   let kernel = ''
   try { kernel = JSON.parse(fs.readFileSync(path.join(repoRoot(), 'kernel.json'), 'utf8')).tag } catch { /* shown as unknown */ }
 
@@ -161,7 +166,24 @@ app.whenReady().then(() => {
     stopJob: async (job) => runtime.stop(job),
     loadPanel: async (file) => ui.panel(file),
     reportPanelError: async (file, message) => ui.reportError(file, message),
-    panelFetch: async (url) => panelFetch(url)
+    panelFetch: async (url) => panelFetch(url),
+    publish: async (chatId) => {
+      if (publishing) return { status: 'refused', text: 'A publish is already running.' }
+      if (agent.isBusy(chatId)) return { status: 'refused', text: 'Wait for Codify to finish, then publish.' }
+      publishing = true
+      try {
+        const repo = settings.publishRepo || (app.isPackaged ? '' : repoRoot())
+        const ask: Message = { role: 'user', content: 'Publish my changes to the repository.' }
+        const r = await publish({
+          repo,
+          mirror: repo ? { from: workspace, to: path.join(repo, 'workspace'), exclude: PUBLISH_EXCLUDE } : undefined,
+          onEvent: (e) => win?.webContents.send(EVENT_CHANNEL, chatId, e)
+        })
+        const text = !repo ? 'Set the repository folder under Settings › Publish, then try again.' : r.text
+        agent.append(chatId, [ask, ...(repo ? r.messages : [{ role: 'assistant', content: text } as Message])])
+        return { status: r.status, text }
+      } finally { publishing = false }
+    }
   }
   for (const c of CHANNELS) ipcMain.handle(c, (_e, ...args: unknown[]) => (handlers[c] as (...a: unknown[]) => unknown)(...args))
 

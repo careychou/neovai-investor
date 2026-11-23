@@ -15,7 +15,7 @@ import { SubAgents } from 'neovai-kernel/cards/sub-agents'
 import { BLOCK_TYPES, makeCheckUiTool, type LiveUi } from 'neovai-kernel/cards/live-ui'
 
 /** The kernel cards this app is built from. `compose` fails at start if one is missing. */
-export const CARDS = ['agent-loop', 'model-providers', 'file-tools', 'shell', 'web-fetch', 'approval', 'session-store', 'settings', 'skills', 'chat-view', 'runtime-agent', 'live-ui', 'sub-agents']
+export const CARDS = ['agent-loop', 'model-providers', 'file-tools', 'shell', 'web-fetch', 'approval', 'session-store', 'settings', 'skills', 'chat-view', 'runtime-agent', 'live-ui', 'sub-agents', 'git-publish']
 
 /** Files in the workspace the agent may read but never change. */
 export const READ_ONLY = ['goals.json', 'records/data/decisions.json']
@@ -51,6 +51,8 @@ export interface Agent {
   send(chatId: string, prompt: string, attachments?: Attachment[]): Promise<SendResult>
   stop(chatId: string): void
   isBusy(chatId: string): boolean
+  /** Adds finished turns (such as a publish run's steps) to a chat and saves it. */
+  append(chatId: string, messages: Message[]): void
   systemPrompt(): string
   /** The workspace skills, read from disk on every call. */
   skills(): Skill[]
@@ -195,6 +197,14 @@ export function createAgent(o: AgentOptions): Agent {
     },
     stop: (chatId) => sessions.get(chatId)?.stop(),
     isBusy: (chatId) => sessions.get(chatId)?.isBusy ?? false,
+    append(chatId, messages) {
+      if (!store.getSession(chatId)) return
+      const session = sessions.get(chatId)
+      if (session) session.messages.push(...messages)
+      if (store.getSession(chatId)?.title === 'New chat') store.updateSession(chatId, { title: 'Publish changes' })
+      store.saveMessages(chatId, session ? session.history : [...store.loadMessages(chatId), ...messages])
+      store.touchSession(chatId)
+    },
     dispose() {
       for (const s of sessions.values()) s.stop()
       sessions.clear()

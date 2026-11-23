@@ -85,6 +85,25 @@ export default function Codify({ request, screens = [] }: { request?: CodifyRequ
   // Reload an open skill when a run changes it.
   useEffect(() => { if (viewing && !running) window.api.readSkill(viewing.name).then((v) => v && setViewing(v)) }, [running, skills])
 
+  const [publishing, setPublishing] = useState(false)
+  // Commits and pushes the workspace; the steps stream into the chat like any run.
+  const publish = async () => {
+    if (publishing || running) return
+    const id = active ?? (await newChat())
+    setPublishing(true)
+    setItems((s) => ({ ...s, [id]: [...(s[id] ?? []), { kind: 'user', text: 'Publish my changes to the repository.' }] }))
+    try {
+      const r = await window.api.publish(id)
+      if (r.status === 'refused') setItems((s) => ({ ...s, [id]: [...(s[id] ?? []), { kind: 'error', text: r.text }] }))
+      else { const { messages } = await window.api.openChat(id); setItems((s) => ({ ...s, [id]: fromMessages(messages) })) }
+    } catch (e) {
+      const text = String((e as Error)?.message ?? e)
+      setItems((s) => ({ ...s, [id]: [...(s[id] ?? []), { kind: 'error', text }] }))
+    }
+    setPublishing(false)
+    refresh()
+  }
+
   const send = async (prompt: string, atts: Attachment[] = []) => {
     if ((!prompt && !atts.length) || running) return
     const id = active ?? (await newChat())
@@ -169,6 +188,9 @@ export default function Codify({ request, screens = [] }: { request?: CodifyRequ
             onSend={(text, atts) => void send(text, atts)}
             running={running}
             onStop={() => active && window.api.stop(active)}
+            onPublish={() => void publish()}
+            publishing={publishing}
+            publishTitle="Publish: commit and push all changes to the repository"
             placeholder="Describe a change, for example: show sector performance as a table on Today. Attach a screenshot or file with the paperclip, paste or drop."
           />
         </div>

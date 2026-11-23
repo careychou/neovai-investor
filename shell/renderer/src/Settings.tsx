@@ -137,6 +137,12 @@ export default function Settings({ info }: { info: AppInfo | null }) {
       </div>
       <p className="muted small">Reasoning and steps apply to both agents. Save first to load the model list for a new provider.</p>
 
+      <h2>Publish</h2>
+      <Field label="Repository folder (the publish button copies the workspace into its workspace/ folder, then commits and pushes)">
+        <input value={s.publishRepo ?? ''} placeholder="/Users/you/projects/neovai-investor" onChange={(e) => setS({ ...s, publishRepo: e.target.value.trim() })} />
+      </Field>
+      <p className="muted small">Run records and your preferences (goals.json) are left out.</p>
+
       <div className="savebar">
         <button className="primary" onClick={save}>Save</button>
         <span className="muted small">{note}</span>
