@@ -7,6 +7,7 @@ import Codify, { type CodifyRequest } from './Codify'
 import Markdown from './Markdown'
 import Settings from './Settings'
 import Skills from './Skills'
+import { LINKS } from './links'
 
 const EMPTY: MainState = { screens: [], data: {}, jobs: [], running: [], started: {}, reports: {}, skills: {} }
 
@@ -58,7 +59,7 @@ export default function App() {
     running: main.running,
     runStarted: main.started,
     runStep: Object.fromEntries(main.running.map((j) => [j, stepOf(runs[j])])),
-    renderActivity: (job) => <MessageList items={runs[job] ?? []} Markdown={Markdown} />,
+    renderActivity: (job) => <MessageList items={runs[job] ?? []} Markdown={Markdown} links={LINKS} />,
     decide: (rec, decision) => { void window.api.decide(rec, decision) },
     reports: main.reports,
     skillText: main.skills,
@@ -71,6 +72,7 @@ export default function App() {
     prefs: goals ?? {},
     savePrefs: async (p) => { await window.api.saveGoals(p as Goals); loadGoals() },
     Markdown,
+    links: LINKS,
     loadPanel: (file) => window.api.loadPanel(file),
     fetch: (url) => window.api.panelFetch(url),
     onPanelError: (file, message) => { void window.api.reportPanelError(file, message) },

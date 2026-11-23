@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Chat as ChatRow } from '../../shared/api'
 import { applyEvent, fromMessages, type Attachment, type Item } from 'neovai-kernel/cards/chat-view'
-import { Composer, MessageList, SessionList } from 'neovai-kernel/cards/chat-view/react'
+import { Composer, MessageList, SessionList, TurnRail } from 'neovai-kernel/cards/chat-view/react'
+import { LINKS } from './links'
 import Markdown from './Markdown'
 
 /** A screen or the Skills page asking Codify for a change. `prompt` is used as is; otherwise the request is about `screen`. `at` makes each click a new request. */
@@ -18,6 +19,7 @@ export default function Codify({ request }: { request?: CodifyRequest | null }) 
   const [draft, setDraft] = useState('')
   const box = useRef<HTMLTextAreaElement>(null)
   const bottom = useRef<HTMLDivElement>(null)
+  const scroller = useRef<HTMLDivElement>(null)
   const busyRef = useRef(busy)
   busyRef.current = busy
 
@@ -134,13 +136,16 @@ export default function Codify({ request }: { request?: CodifyRequest | null }) 
         />
       </aside>
       <section className="thread">
-        <div className="messages">
+        <div className="messagewrap">
+        <div className="messages" ref={scroller}>
           {list.length === 0 && (
             <p className="muted empty">Say how the app should look or behave. Codify changes the screens, jobs, skills and code in the workspace, and the change shows at once.</p>
           )}
-          <MessageList items={list} Markdown={Markdown} />
+          <MessageList items={list} Markdown={Markdown} links={LINKS} />
           {running && list.at(-1)?.kind !== 'reasoning' && <div className="muted small working">Working…</div>}
           <div ref={bottom} />
+        </div>
+        <TurnRail scrollRef={scroller} deps={list} />
         </div>
         <div className="composer">
           <Composer

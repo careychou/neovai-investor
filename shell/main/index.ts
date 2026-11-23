@@ -62,7 +62,10 @@ function createWindow() {
     return { action: 'deny' }
   })
   win.webContents.on('will-navigate', (e, url) => {
-    if (url !== win?.webContents.getURL()) e.preventDefault()
+    if (url === win?.webContents.getURL()) return
+    e.preventDefault()
+    // A link in a chat or on a screen opens in the browser, not in the app window.
+    if (/^https?:/.test(url) && !url.startsWith(process.env.ELECTRON_RENDERER_URL ?? '\0')) void shell.openExternal(url)
   })
   win.on('closed', () => { win = null })
   if (process.env.ELECTRON_RENDERER_URL) void win.loadURL(process.env.ELECTRON_RENDERER_URL)
