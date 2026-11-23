@@ -11,10 +11,11 @@ import { PermissionGate } from 'neovai-kernel/cards/approval'
 import { Store, type SessionRow } from 'neovai-kernel/cards/session-store'
 import { loadSkills, makeSkillTool, skillsPrompt, type Skill } from 'neovai-kernel/cards/skills'
 import { loadJobs } from 'neovai-kernel/cards/runtime-agent'
+import { SubAgents } from 'neovai-kernel/cards/sub-agents'
 import { BLOCK_TYPES, makeCheckUiTool, type LiveUi } from 'neovai-kernel/cards/live-ui'
 
 /** The kernel cards this app is built from. `compose` fails at start if one is missing. */
-export const CARDS = ['agent-loop', 'model-providers', 'file-tools', 'shell', 'web-fetch', 'approval', 'session-store', 'settings', 'skills', 'chat-view', 'runtime-agent', 'live-ui']
+export const CARDS = ['agent-loop', 'model-providers', 'file-tools', 'shell', 'web-fetch', 'approval', 'session-store', 'settings', 'skills', 'chat-view', 'runtime-agent', 'live-ui', 'sub-agents']
 
 /** Files in the workspace the agent may read but never change. */
 export const READ_ONLY = ['goals.json', 'records/data/decisions.json']
@@ -86,6 +87,7 @@ const BASE_PROMPT = `You are Codify, the coding agent inside Neovai Investor, a 
 
 # How to work
 - Act with your tools instead of describing what you would do. Call independent tools in parallel.
+- For big work with independent parts (research several stocks, or build a panel while you edit a skill), hand each part to a helper with the task tool, several in one reply so they run at the same time. Give each a complete prompt; they do not see this chat. Use mode "background" for long research you do not need right away; you are told when it ends.
 - The user may attach screenshots, mockups or files to a request. Treat an attached image as the reference for how a screen should look, and say which parts you matched.
 - You may read and change files only inside the workspace folder. goals.json is read-only for you: only the user changes it, on the Preferences screen.
 - Shell commands run in the workspace folder without asking the user. Give each one a short description. Use an async shell for long jobs.
@@ -134,17 +136,27 @@ export function createAgent(o: AgentOptions): Agent {
           })
         }
         o.onEvent(chatId, e)
+        // A background helper can wake the chat after send() returned; save that turn too.
+        if (e.kind === 'agent_end' && e.agentId === 'main') { store.saveMessages(chatId, session.history); store.touchSession(chatId) }
       },
       requestPermission: async () => 'allow',
       askUser: async () => ''
     }
-    const session = new Session({
-      adapter: o.adapter, hooks, gate: new PermissionGate(hooks, true),
+    const gate = new PermissionGate(hooks, true)
+    const subs = new SubAgents({
+      adapter: o.adapter, hooks, gate, cwd: o.workspace, tools, services: { shells },
+      model: () => o.settings().defaultModel, maxTurns: () => o.settings().maxTurnsMain,
+      maxOutputTokens: () => o.settings().maxOutputTokens, reasoning: () => o.settings().reasoning as Reasoning,
+      system: () => `${BASE_PROMPT}\n\n${PLAIN_LANGUAGE_RULES}\n\n# Environment\n- Workspace: ${o.workspace}\n- Date: ${new Date().toISOString().slice(0, 10)}`
+    })
+    const session: Session = new Session({
+      adapter: o.adapter, hooks, gate,
       model: row.model || s.defaultModel, cwd: o.workspace,
-      system: systemPrompt, tools, services: { shells },
+      system: systemPrompt, tools: () => [...tools, ...subs.tools()], services: { shells },
       maxConcurrency: s.maxConcurrency, maxTurns: s.maxTurnsMain, maxOutputTokens: s.maxOutputTokens,
       reasoning: s.reasoning as Reasoning, history: store.loadMessages(chatId)
     })
+    subs.attach(session)
     sessions.set(chatId, session)
     return session
   }

@@ -94,6 +94,7 @@ app.whenReady().then(() => {
     readOnly: ['goals.json', 'records/data/decisions.json'],
     goalsTitle: 'Preferences (set by the user on the Preferences screen)',
     tools: [webFetch],
+    subAgents: true,
     onEvent: (_runId, job, e) => win?.webContents.send(RUN_EVENT_CHANNEL, job, e)
   })
   agent = createAgent({

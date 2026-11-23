@@ -43,7 +43,9 @@ export default function Codify({ request, screens = [] }: { request?: CodifyRequ
   useEffect(() => {
     refresh().then(() => window.api.listChats()).then((l) => { if (l[0]) select(l[0].id) })
     return window.api.onEvent((chatId, e) => {
-      if (e.kind === 'agent_end') { setBusy((s) => ({ ...s, [chatId]: false })); refresh(); return }
+      // A background helper finishing can start a new main turn on its own.
+      if (e.agentId === 'main' && e.kind !== 'agent_end' && !busyRef.current[chatId]) setBusy((s) => ({ ...s, [chatId]: true }))
+      if (e.kind === 'agent_end' && e.agentId === 'main') { setBusy((s) => ({ ...s, [chatId]: false })); refresh(); return }
       setItems((s) => {
         const cur = s[chatId] ?? []
         const next = applyEvent(cur, e)

@@ -9,7 +9,7 @@ Not financial advice. The app never places trades or logs in to a brokerage.
 
 ## Status
 
-Version 0.10.0. New in 0.10.0: every chat (Codify and run activity) shows tool steps in three levels, a one-line summary, then the steps in plain words, then each step's input and output, and the attach button is a paperclip. In 0.9.0: panels can draw trading-style charts (`chart` block or `<Chart>`: candlesticks, line, area, bars, volume, last-price tag, hover O/H/L/C), fetch live data through the main process (`useFetch`, `fetchJson`), import plain `.css` files and split into many files; Market Scan ships a live symbol chart (`ui/SymbolChart.tsx`) that Codify built. The app has two halves:
+Version 0.11.0. New in 0.11.0: Codify and the Main App's runtime agent can hand independent parts of a request to helper agents that run at the same time (for example one per stock); each helper shows as a step you can open to see its own work, nested in the chat, and Codify's helpers can run in the background and report back when done. In 0.10.0: every chat (Codify and run activity) shows tool steps in three levels, a one-line summary, then the steps in plain words, then each step's input and output, and the attach button is a paperclip. In 0.9.0: panels can draw trading-style charts (`chart` block or `<Chart>`: candlesticks, line, area, bars, volume, last-price tag, hover O/H/L/C), fetch live data through the main process (`useFetch`, `fetchJson`), import plain `.css` files and split into many files; Market Scan ships a live symbol chart (`ui/SymbolChart.tsx`) that Codify built. The app has two halves:
 
 - **Main App**: one tab per skill, each with its own job: Preferences
   (user-preference, first tab: the user's budget, limits and trading rules, saved to
@@ -92,6 +92,7 @@ flowchart LR
     ST["settings<br/>sealed API keys"]
     SK["skills<br/>SKILL.md + skill tool"]
     RT["runtime-agent<br/>runs jobs/*.md headlessly"]
+    SUB["sub-agents<br/>task, read_agent: parallel<br/>and background helpers"]
     LU["live-ui<br/>screens, panel compiler, check_ui,<br/>decide, panelFetch"]
     CV["chat-view<br/>view model"]
   end
@@ -104,7 +105,9 @@ flowchart LR
   IDX --> AG & SET
   IDX --> ST & MP & RT & LU & WF
   AG --> CMP & LOOP & FT & SH & WF & APR & SS & SK & RT & LU
-  RT --> LOOP & SK & FT
+  RT --> LOOP & SK & FT & SUB
+  AG --> SUB
+  SUB --> LOOP
   LOOP --> MP
   CVR --> CV
   FT & SK & RT & LU <--> WS
@@ -120,11 +123,14 @@ flowchart LR
    are compiled on request with the allowed libraries (`DEFAULT_EXTERNALS` + `PANEL_LIBRARIES`).
 4. **Main App agent**: `createRuntime` (runtime-agent) runs `jobs/<name>.md` with the skills, `web-fetch`,
    and the same model as Codify; `goals.json` and `decisions.json` are read-only to it. Its events go to the
-   window as `RUN_EVENT` (the live run activity).
+   window as `RUN_EVENT` (the live run activity). With `subAgents: true` a run can split a job into parallel
+   helpers (sub-agents card) that keep its tools and its `records/`-only write limit.
 5. **Codify agent**: `createAgent` (`agent.ts`) calls `compose(CARDS)`, builds the tool set (file-tools rooted
    at the workspace, shell, web-fetch, the skill tool, `check_ui`), and opens one agent-loop `Session` per chat,
    with `PermissionGate` (approval), history and usage in `Store` (session-store), and a system prompt that is
-   rebuilt each turn from `instructions/system.md`, the skills, the jobs and the preferences.
+   rebuilt each turn from `instructions/system.md`, the skills, the jobs and the preferences. Each chat also gets
+   a `SubAgents` (sub-agents card) attached to its session: the `task` tool runs helpers in parallel or in the
+   background, Stop cancels them all, and a finished background helper wakes the chat (`session.notify`).
 6. **Bridge**: a handler map typed by `shared/api.ts` is registered with `ipcMain.handle` for every channel;
    `preload` exposes the same channels as `window.api`.
 
@@ -200,7 +206,7 @@ tag in `kernel.json`.
 
 ```sh
 git clone https://github.com/careychou/neovai-kernel ../neovai-kernel
-git -C ../neovai-kernel checkout v0.10.0
+git -C ../neovai-kernel checkout v0.11.0
 npm install
 npm run build && npx electron .
 ```
