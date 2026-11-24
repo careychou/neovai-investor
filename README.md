@@ -1,23 +1,73 @@
 # Neovai Investor
 
-A desktop app that recommends stocks and improves itself over time. It carries a
-small agent harness (the [Neovai kernel](https://github.com/careychou/neovai-kernel))
-next to its own logic and screens, so the agent can change the app's
-skills, logic and UI from your feedback.
+A desktop stock-research app that also carries the agent that maintains it. You use it to scan the market, check candidates and get buy, sell and hold calls. When something should work differently, you tell it, and its coding agent changes the app's screens, rules and logic while it runs. It's built on the [Neovai kernel](https://github.com/careychou/neovai-kernel), a set of pluggable agent-harness cards.
 
 Not financial advice. The app never places trades or logs in to a brokerage.
 
-## Status
+What each version added is in [CHANGELOG.md](CHANGELOG.md). The longer design write-up is [docs/design.md](docs/design.md).
 
-Version 0.17.0. New in 0.17.0: three buckets and risk numbers. The budget now splits 40% long-term holds, 40% trades and 20% T-bill income. The market scan screens for under-followed quality companies (small and mid caps with few analysts, solid returns on capital, cash flow and low debt) for the long bucket, and flags hype names (RSI over 75, heavy short interest, a news spike), which are allowed only as quick trades. Long holds get their own rules (user-preference 26 to 33): an 8–10% stop or a close under the 200-day average, holding through earnings while the thesis holds, a third sold at +30% with the rest trailed, up to 1.5× the per-stock cap. Every call shows its bucket, Candidates filters by bucket, and Recommendations shows each bucket against its cap. Market Scan's chart reaches 2, 5 and 10 years and Max with 50/200-day (or 10/40-week) averages and the yearly growth rate, and a **Details** button and a clickable watch list open any stock's long chart, key stats (valuation, quality, risk, who follows it, growth and income) and hidden-jewel checks. Performance adds **Trend and risk vs the S&P 500**: growth of $100 against SPY, drawdown, and alpha, beta, Sharpe, Sortino, max drawdown, volatility, correlation and up/down capture, for your account since the start or for today's mix over 1, 3 or 5 years. The review job saves the same numbers as `riskMetrics`, and the recommendation job trims trades when beta, drawdown or Sharpe say the account is running hot.
+## Why it's built this way
 
-New in 0.16.0: holdings you bought yourself. On the Performance screen, **Add holding** records a stock, ETF or mutual fund you bought outside the app's calls, with shares, average cost, buy date and a note. It joins the Positions table marked "Added by you", priced live, and counts in the account as extra money: it adds to total value, invested and unrealized profit, but never touches the app's cash, goal or win rate. Click any position, yours or the app's, for its dividends (last 12 months, yield, your yearly income, recent payouts), company or fund facts, and for funds the top holdings with their weights. The list lives in `records/data/holdings.json`; only the app writes it, and the agents read it for news, overlap and the account review.
+Most apps with an AI feature ship one agent: a chat box that answers questions about the app. The app itself stays fixed until a developer writes the next release. That's fine when the rules are stable. Investing rules aren't. Mine changed several times while building this: first short-term trades only, then a T-bill income sleeve, then a long-term bucket for under-followed companies. Each change touched the screens, the instructions the agents follow, and the math behind the numbers.
 
-New in 0.15.0 (kernel v0.15.0): links and a turn rail in chat. Web addresses in your messages, the agents' replies, run activity and screen tables, lists and metrics are clickable and open in your browser, and stock cashtags such as `$AAPL` link to their quote page (the app's only link rule, in `shell/renderer/src/links.ts`, passed to the kernel as `links`). Long table cells show their full text on hover. Codify's chat has a rail on its right edge with a tick per request: hover shows "Turn N · prompt", click jumps to it, and the turn in view is highlighted. In 0.14.0: a **Skills** page in the left menu lists every skill the app uses, grouped by where it lives: this app's workspace skills (read and edit them here, or have Codify change them) and shared skills from the project's `.github/skills` and your `~/.copilot/skills` (read-only; both agents can load them by name). Codify's second column is now session history only, and each request can be renamed (pencil or double-click). Both come from kernel v0.14.0 (`SessionList`, `SkillList`, `loadSkillSources`). In 0.13.0: publish goes straight to the remote repository (Settings › Publish › Repository, e.g. `git@github.com:you/neovai-investor.git`): it downloads the repository into a temporary folder, copies the workspace in, commits, pushes and deletes the folder, so no local working copy is needed (a local folder still works). In 0.12.0: a publish button next to the paperclip in Codify. One click copies the app's workspace into this repository's `workspace/` folder (leaving out run records and your preferences), commits and pushes, and the chat shows each step as it happens. In 0.11.0: Codify and the Main App's runtime agent can hand independent parts of a request to helper agents that run at the same time (for example one per stock); each helper shows as a step you can open to see its own work, nested in the chat, and Codify's helpers can run in the background and report back when done. In 0.10.0: every chat (Codify and run activity) shows tool steps in three levels, a one-line summary, then the steps in plain words, then each step's input and output, and the attach button is a paperclip. In 0.9.0: panels can draw trading-style charts (`chart` block or `<Chart>`: candlesticks, line, area, bars, volume, last-price tag, hover O/H/L/C), fetch live data through the main process (`useFetch`, `fetchJson`), import plain `.css` files and split into many files; Market Scan ships a live symbol chart (`ui/SymbolChart.tsx`) that Codify built. The app has two halves:
+So this app has two agents built from the same harness, working at two different times.
+
+- **Runtime.** When you click **Run market scan**, a runtime agent reads the app's skills and the job, fetches prices and news, and writes fresh data for the screen. It can read anything but may write only in `records/`. It answers questions; it can't change how the app works.
+- **Co-design time.** When you tell Codify "trade-bucket stops should be 2%, long holds 8–10%", a coding agent edits the skill, the job's data shape, the screen and the panel code. The screen updates while you watch, and the next run follows the new rules. No rebuild, no release.
+
+Both are the same agent loop, the same model router, the same tools and the same chat view. What separates them is permission: which tools they get and which folders they may write. That's the design bet. If the harness is a set of small cards, an app can carry it next to its own code, and the same cards can serve both the agent that uses the app and the agent that reshapes it.
+
+There's a practical reason to split them rather than give one agent everything. You want the daily runs to be predictable and cheap to trust: same rules every time, no side effects outside their data. And you want the change process to be deliberate: you ask, you see the diff in the chat, you check the screen. Mixing the two would mean a market scan that might rewrite its own stop-loss rule. Keeping them apart gives you an app that improves, but only when you ask it to.
+
+## The pattern: fixed shell, kernel cards, editable workspace
+
+The app has three layers, and only one of them is meant to change after install.
+
+```mermaid
+flowchart TB
+  subgraph SHELL["Shell (fixed) — shell/"]
+    direction LR
+    MAIN["Electron main<br/>wires cards, IPC, settings"]
+    WIN["Window<br/>tabs, Codify, Skills, Settings"]
+  end
+  subgraph KERNEL["Kernel cards (pinned tag) — neovai-kernel"]
+    direction LR
+    LOOP["agent-loop<br/>model-providers<br/>approval · session-store"]
+    TOOLS["file-tools · shell<br/>web-fetch · skills<br/>sub-agents"]
+    RUNC["runtime-agent"]
+    UIC["live-ui · chat-view<br/>git-publish · settings"]
+  end
+  subgraph WS["Workspace (editable, live) — workspace/"]
+    direction LR
+    INS["instructions/<br/>skills/ · jobs/"]
+    UIW["ui/screens/*.json<br/>ui/*.tsx panels"]
+    REC["records/<br/>data the screens show"]
+  end
+  RA(("Runtime agent<br/>writes records/ only"))
+  CA(("Codify<br/>writes the workspace"))
+  SHELL --> KERNEL
+  KERNEL --> RA & CA
+  RA -- reads --> INS
+  RA -- writes --> REC
+  CA -- edits --> INS & UIW
+  UIW -- reads --> REC
+```
+
+- **Shell** (`shell/`). A thin Electron app: it picks the cards, connects them to the window over IPC, and holds settings and API keys. Neither agent can edit it. It changes only when I ship a new version.
+- **Kernel cards** (`neovai-kernel`, pinned in `kernel.json`). Each card is one harness feature with a headless part for the main process and, where it has a UI, a React part for the window. The app takes the ones it needs: the agent loop, model routing, tools, approvals, chat storage, skills, the runtime agent, helper agents, the live UI and git publish. A feature every app should get goes into a card, not into this repo.
+- **Workspace** (`workspace/`). Everything that makes this app an investing app: instructions, skills, jobs, screens, panels and the data the runs produce. It's plain files. The installed app keeps its own copy under `~/Library/Application Support/Neovai Investor/workspace`, and both agents work there.
+
+Three ideas make the workspace safe to edit live:
+
+1. **Read fresh from disk.** Each run rebuilds the agent's instruction from `instructions/system.md`, every skill in order and the job file. Edit a skill and the next run uses it.
+2. **Description first, code as an escape hatch.** A screen is a JSON list of built-in blocks: metrics, tables, alerts, recommendations, run buttons. Codify can usually get what you asked for by editing that list. When no block fits, it writes a React panel, which the app compiles while running. If the panel breaks, the screen keeps the last version that worked.
+3. **Write limits instead of trust.** The runtime agent can't write outside `records/`. Neither agent can write `goals.json` (your preferences), `decisions.json` (your Accept and Decline history) or `holdings.json`. Those belong to you and the app.
+
+## What's in the app
 
 - **Main App**: one tab per skill, each with its own job: Preferences
   (user-preference, first tab: the user's budget, limits and trading rules, saved to
-  `goals.json`; Settings no longer has a Goals form), Market Scan (market-scan),
+  `goals.json`), Market Scan (market-scan),
   Candidates (candidate-evaluation), Recommendations (recommendation: new stocks,
   sells and changes, with Refresh) and Performance (performance-review: outcomes and
   open positions). Each tab has "Change this
@@ -55,8 +105,6 @@ New in 0.15.0 (kernel v0.15.0): links and a turn rail in chat. Web addresses in 
   read-only; the agents load them on demand, and a workspace skill with the same
   name wins. "Improve skills from my picks" asks Codify to study your decisions and
   the review results and propose skill changes, which it makes only after you agree.
-
-See `docs/design.md`.
 
 ## How the app uses the kernel cards
 
