@@ -9,6 +9,7 @@ This job is the same as the daily job with `mode` "reuse-candidates". Ignore any
 Inputs:
 - Candidates: `records/data/candidates.json`. Reuse it as it is, even if its date is not today. Do not run a new market scan or candidate evaluation. The user picks this job when they want to refresh only the recommendations. If the file is missing, save "picks" with empty buys, keep making the sell and change calls on open positions, and say in "summary" that a full refresh is needed for new buys. Still fetch today's prices for entries, targets and stops, and use "no data" for any price you cannot fetch.
 - Open positions: the Buy calls the user accepted in `records/data/decisions.json` that a later accepted Sell all has not closed, and the positions in `records/data/review.json`.
+- Holdings added by hand: `records/data/holdings.json`. Count them for overlap and concentration only, as the recommendation skill says. No Sell or Change calls on them.
 
 Before you finish, call save_data with the name "picks" and this shape. Every call needs an entry, target and stop, and a "name": the company or fund name as listed (for example "Walmart Inc.", "Consumer Staples Select Sector SPDR Fund"); use "no data" if you cannot find it, never guess:
 

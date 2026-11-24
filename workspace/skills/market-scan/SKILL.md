@@ -18,7 +18,7 @@ Use the web fetch tool. Give every number its source and the time you read it.
 
 ## News on my holdings
 
-1. Find the holdings in `records/data/decisions.json` (read-only). A holding is a ticker with an accepted Buy that no later accepted Sell all has closed. An accepted Sell part leaves the rest of the position open. A declined call never opens or closes a position. Note the entry, target and stop from the Buy.
+1. Find the holdings in `records/data/decisions.json` (read-only). A holding is a ticker with an accepted Buy that no later accepted Sell all has closed. An accepted Sell part leaves the rest of the position open. A declined call never opens or closes a position. Also add every ticker in `records/data/holdings.json` (read-only): stocks and funds the user bought outside the app. For a fund (ETF or mutual fund) look for news on the fund itself, its dividend, and big moves in its top holdings. Note the entry, target and stop from the Buy.
 2. For each holding, fetch news from the last 48 hours: the CNBC quote page (`cnbc.com/quotes/<TICKER>`, news section), plus the market live blog and stocks-moving pages above. Look for earnings and guidance, rating changes, deals, lawsuits, product news, insider sales and sector news that names the stock.
 3. Keep only news that could move the stock. Keep up to three items per holding, newest first. If you find nothing relevant, add one row for that ticker with headline "No relevant news found" and impact "neutral". If every fetch fails, use headline "no data". Never make up a headline.
 4. Rate each item for the position: `good` (helps the case for holding it), `bad` (hurts the case, or puts the stop or an earnings date at risk) or `neutral`.

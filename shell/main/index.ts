@@ -11,6 +11,7 @@ import { createRuntime, type Runtime } from 'neovai-kernel/cards/runtime-agent'
 import { createLiveUi, DEFAULT_EXTERNALS, panelFetch, type LiveUi, type Screen } from 'neovai-kernel/cards/live-ui'
 import { createAgent, type Agent } from './agent'
 import { loadGoals, saveGoals } from './goals'
+import { HOLDINGS_FILE, saveHoldings } from './holdings'
 import { seedWorkspace } from './seed'
 import { publish } from 'neovai-kernel/cards/git-publish'
 import { writeSkill, type SkillSource } from 'neovai-kernel/cards/skills'
@@ -110,8 +111,8 @@ app.whenReady().then(() => {
       model: runtimeModelOf(settings), reasoning: settings.reasoning as never, maxTurns: settings.maxTurnsMain,
       maxOutputTokens: settings.maxOutputTokens, maxConcurrency: settings.maxConcurrency
     }),
-    // Accept and decline are the user's; the agent reads them to learn but never rewrites them.
-    readOnly: ['goals.json', 'records/data/decisions.json'],
+    // Accept and decline, and holdings added by hand, are the user's; the agent reads them to learn but never rewrites them.
+    readOnly: ['goals.json', 'records/data/decisions.json', HOLDINGS_FILE],
     goalsTitle: 'Preferences (set by the user on the Preferences screen)',
     tools: [webFetch],
     subAgents: true,
@@ -179,6 +180,7 @@ app.whenReady().then(() => {
       changed()
     },
     decide: async (rec, decision) => { ui.decide(rec, decision); changed() },
+    saveHoldings: async (items) => { const r = saveHoldings(workspace, items); changed(); return r },
     mainState: async () => mainState(),
     runJob: async (job, input) => {
       if (!runtimeModelOf(settings)) return { ok: false, error: 'Choose a model in Settings first.' }

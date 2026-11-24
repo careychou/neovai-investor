@@ -4,11 +4,11 @@ order: 5
 ---
 # Performance review
 
-Input: `records/data/decisions.json`, every file in `records/`, `goals.json` and today's live prices.
+Input: `records/data/decisions.json`, `records/data/holdings.json`, every file in `records/`, `goals.json` and today's live prices.
 
 ## 1. Build the account ledger from decisions.json
 
-`records/data/decisions.json` is the only source of truth for what the user holds. Only **accepted** calls count. Declined calls are not trades.
+`records/data/decisions.json` is the only source of truth for what the user holds through the app's calls. Only **accepted** calls count. Holdings the user bought elsewhere are in `holdings.json` (section 1b) and never enter this ledger. Declined calls are not trades.
 
 Go through the accepted items in time order (`at`, then `date`):
 
@@ -23,9 +23,22 @@ Go through the accepted items in time order (`at`, then `date`):
 
 Each closed part becomes one closed trade: ticker, buy date, sell date, shares, entry, exit, realized $ = (exit − entry) × shares, realized % = (exit − entry) / entry × 100, days held.
 
+## 1b. Holdings added by hand
+
+`records/data/holdings.json` holds `{items: [{id, ticker, shares, avgCost, buyDate?, name?, kind?, note?}]}`: stocks and funds the user bought outside the app's calls. The app writes it from the Performance screen; it is read-only to you.
+
+- They are the user's positions. Treat each item as one open lot: shares and average cost as given, buy date if given. Never sell, merge or change them; the user edits them on the screen.
+- They are extra money, not part of the app's budget. Keep them out of cash, invested, the account totals, the goal, the win rate and the loss limits, so the app's record stays a fair score of its own calls.
+- Value each one like a holding in section 3 (price, previous close, market value, cost basis, unrealized and day change, days held when the buy date is known), and add dividends:
+  - Trailing 12-month dividend per share: the sum of payouts in the last 365 days. Yahoo's chart answer with `&events=div` (range=1y) lists them under `events.dividends`.
+  - Yield = trailing dividend ÷ price × 100. Estimated yearly income = shares × trailing dividend.
+  - Next or last ex-dividend date when you can find it.
+- Watch line: one line per holding, as in section 3, plus anything that matters for income (a dividend cut, an ex-date this week).
+- Save them in `manual` (see the review job) with `source: "manual"` on each row. Add the manual totals: cost basis, market value, unrealized, day change and estimated yearly income.
+
 ## 2. Get prices
 
-For every open ticker get the current price and the previous close, with source and time. If you cannot get a price, set it to null and write "no data". Never guess a price.
+For every open ticker, including the holdings added by hand, get the current price and the previous close, with source and time. If you cannot get a price, set it to null and write "no data". Never guess a price.
 
 ## 3. Compute holdings
 

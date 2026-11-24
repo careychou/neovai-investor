@@ -46,6 +46,7 @@ const clean = (s: string) => s.trim().toUpperCase().replace(/[^A-Z0-9.\-^=]/g, '
 export default function SymbolChart() {
   const { get } = useApp()
   const decisions = (get('decisions.items') as any[]) ?? []
+  const manual = (get('holdings.items') as any[]) ?? []
   const watchRaw = get('market.watch') as any[]
   const [custom, setCustom] = usePanelState<string[]>('symbolChart.custom', [])
   const [draft, setDraft] = useState('')
@@ -53,7 +54,10 @@ export default function SymbolChart() {
   const groups = useMemo(() => {
     const seen = new Set<string>()
     const take = (list: string[]) => list.map(clean).filter((t) => t && !seen.has(t) && (seen.add(t), true))
-    const held = take(holdingTickers(Array.isArray(decisions) ? decisions : []).filter((t) => t !== 'SPY'))
+    const held = take([
+      ...holdingTickers(Array.isArray(decisions) ? decisions : []).filter((t) => t !== 'SPY'),
+      ...(Array.isArray(manual) ? manual : []).map((m) => String(m?.ticker ?? '')),
+    ])
     const market = take(MARKET)
     const watch = take((Array.isArray(watchRaw) ? watchRaw : []).map((w) => String(w?.ticker ?? '')))
     const mine = take(custom ?? [])
@@ -63,7 +67,7 @@ export default function SymbolChart() {
       { label: 'Scan watch list', items: watch },
       { label: 'Added by me', items: mine },
     ].filter((g) => g.items.length)
-  }, [decisions, watchRaw, custom])
+  }, [decisions, manual, watchRaw, custom])
   const tickers = useMemo(() => groups.flatMap((g) => g.items), [groups])
 
   const [picked, setPicked] = usePanelState<string>('symbolChart.ticker', tickers[0] ?? 'SPY')

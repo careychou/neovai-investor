@@ -14,6 +14,22 @@ export interface SkillInfo { name: string; description: string; source: string; 
 export interface SkillText { name: string; path: string; text: string; source: string; editable: boolean }
 
 /** The user's preferences (goals.json): any fields the Preferences screen sets. */
+/** A holding the user bought outside the app's calls, kept in records/data/holdings.json. */
+export interface ManualHolding {
+  id: string
+  ticker: string
+  shares: number
+  /** Average cost per share. */
+  avgCost: number
+  buyDate?: string
+  name?: string
+  /** Stock, ETF, Mutual fund… as found when it was added. */
+  kind?: string
+  note?: string
+  addedAt: string
+  updatedAt: string
+}
+
 export interface Goals { earningCapPct?: number; lossLimitPct?: number; budget?: number; [key: string]: unknown }
 
 export interface AppInfo { version: string; kernel: string; workspace: string }
@@ -62,6 +78,8 @@ export interface Api {
   saveSkill(name: string, text: string): Promise<void>
   /** Records accepting or declining a recommendation in records/data/decisions.json; null undoes it. */
   decide(rec: Recommendation, decision: Decision | null): Promise<void>
+  /** Replaces the holdings the user added by hand (records/data/holdings.json) and returns them cleaned. Throws a plain message on a bad item. */
+  saveHoldings(items: ManualHolding[]): Promise<ManualHolding[]>
   mainState(): Promise<MainState>
   /** Starts a job; `input` holds options picked on the screen. The result arrives through onRunEvent and mainState. */
   runJob(job: string, input?: RunInput): Promise<{ ok: boolean; error?: string }>
@@ -85,7 +103,7 @@ export const PANEL_LIBRARIES = ['recharts', 'lucide-react', 'date-fns'] as const
 
 export const CHANNELS = [
   'info', 'secretsEncrypted', 'getSettings', 'saveSettings', 'listModels', 'getGoals', 'saveGoals',
-  'listChats', 'newChat', 'openChat', 'deleteChat', 'renameChat', 'send', 'stop', 'listSkills', 'readSkill', 'saveSkill', 'decide',
+  'listChats', 'newChat', 'openChat', 'deleteChat', 'renameChat', 'send', 'stop', 'listSkills', 'readSkill', 'saveSkill', 'decide', 'saveHoldings',
   'mainState', 'runJob', 'stopJob', 'loadPanel', 'reportPanelError', 'panelFetch', 'publish'
 ] as const
 export const EVENT_CHANNEL = 'agent-event'

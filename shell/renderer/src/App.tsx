@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ScreenView, type ScreenHost } from 'neovai-kernel/cards/live-ui/react'
 import { MessageList } from 'neovai-kernel/cards/chat-view/react'
 import { applyEvent, peek, toolLabel, type Item } from 'neovai-kernel/cards/chat-view'
-import type { AppInfo, Goals, MainState } from '../../shared/api'
+import type { AppInfo, Goals, MainState, ManualHolding } from '../../shared/api'
 import Codify, { type CodifyRequest } from './Codify'
 import Markdown from './Markdown'
 import Settings from './Settings'
@@ -68,7 +68,8 @@ export default function App() {
       if (req.skill) { setSkillReq({ name: req.skill, at: Date.now() }); setTab('skills') }
       else { setCodifyReq({ ...req, at: Date.now() }); setTab('codify') }
     },
-    panelProps: { goals },
+    // saveHoldings lets the Performance panel keep holdings the user added by hand (records/data/holdings.json).
+    panelProps: { goals, saveHoldings: (items: ManualHolding[]) => window.api.saveHoldings(items) },
     prefs: goals ?? {},
     savePrefs: async (p) => { await window.api.saveGoals(p as Goals); loadGoals() },
     Markdown,

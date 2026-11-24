@@ -18,7 +18,7 @@ import { BLOCK_TYPES, makeCheckUiTool, type LiveUi } from 'neovai-kernel/cards/l
 export const CARDS = ['agent-loop', 'model-providers', 'file-tools', 'shell', 'web-fetch', 'approval', 'session-store', 'settings', 'skills', 'chat-view', 'runtime-agent', 'live-ui', 'sub-agents', 'git-publish']
 
 /** Files in the workspace the agent may read but never change. */
-export const READ_ONLY = ['goals.json', 'records/data/decisions.json']
+export const READ_ONLY = ['goals.json', 'records/data/decisions.json', 'records/data/holdings.json']
 
 export interface AgentSettings {
   defaultModel: string
@@ -77,6 +77,7 @@ const BASE_PROMPT = `You are Codify, the coding agent inside Neovai Investor, a 
   - data is a path into records/data: "today.picks" reads records/data/today.json, key picks.
 - Decisions: the user accepts or declines calls on screens; the app saves them in records/data/decisions.json as {items: [{id, date, ticker, action, decision: accepted|declined, at, ...}]}. It is read-only for both agents. Show it with data "decisions.items".
   - run {job, label?, input?}: input is text or an object of options sent to the runtime agent with the run, for example {"mode": "reuse-scan"}. The job file must say what each option means.
+- Holdings added by hand: records/data/holdings.json holds {items: [{id, ticker, shares, avgCost, buyDate?, name?, kind?, note?, addedAt, updatedAt}]}, stocks and funds the user bought outside the app's calls. Only the app writes it, from the Performance screen; it is read-only for both agents. They count as positions (marked "Added by you") but are extra money, so they never change cash. Show it with data "holdings.items".
 - Preferences: goals.json holds the user's preferences (budget, profit and loss limits, position sizes, trading rules…). It is any JSON object; earningCapPct, lossLimitPct and budget are always there and other fields are yours to design. Only the user changes it, on the Preferences screen (first tab), through a panel that calls savePrefs. There is no goals form in Settings. Both agents read it every run; jobs and skills must follow it.
 - Panels: when no block fits, write a React component in a .tsx file in ui/ and add a panel block. Panels are full interactive UI, not just display. A panel gets props data (all saved data) and goals (the preferences), and may import:
   - react, and relative files in the workspace.
@@ -90,7 +91,7 @@ const BASE_PROMPT = `You are Codify, the coding agent inside Neovai Investor, a 
   - Styling: inline styles, or a plain .css file next to the panel imported with import './MyPanel.css' (scope its classes with a unique prefix). Use the app's classes (button, button.primary, .lu-* block classes) and variables var(--text), var(--muted), var(--line), var(--panel), var(--accent), var(--ok), var(--bad).
   - Split big panels into several .tsx files and shared helpers (for example ui/lib/*.ts, logic/*.ts) imported by relative path.
   - Nothing else: no other packages.
-  - Panels cannot write files other than preferences through savePrefs. Jobs change data.
+  - Panels cannot write files other than preferences through savePrefs, and holdings through the saveHoldings(items) prop (the whole list; it returns the cleaned list and throws a plain message on a bad item). Jobs change data.
 
 # How to work
 - Act with your tools instead of describing what you would do. Call independent tools in parallel.

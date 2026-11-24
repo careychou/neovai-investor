@@ -8,6 +8,8 @@ Input: the ranked table from `candidate-evaluation` (`records/data/candidates.js
 
 Open positions are the Buy calls the user accepted in `records/data/decisions.json` and has not closed with an accepted Sell all, plus those in `records/data/review.json`. A call the user did not accept is not a position.
 
+The user also holds what is in `records/data/holdings.json` (read-only), bought outside the app with their own money. Count those tickers as held when you check overlap and concentration: do not recommend buying a stock the user already holds there without saying so, and count a fund's top holdings as exposure to those stocks. Do not make Sell or Change calls on them; the app's calls and budget cover only its own positions. If news or a rule makes one worth a look, say so in the summary and the user decides.
+
 ## Open positions first
 
 For each position the user still holds, pick one:
