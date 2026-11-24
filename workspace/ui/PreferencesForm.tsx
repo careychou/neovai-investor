@@ -1,3 +1,4 @@
+import './fullWidth.css'
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useApp } from '@neovai/panel'

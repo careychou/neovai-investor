@@ -1,3 +1,4 @@
+import './fullWidth.css'
 import { useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'

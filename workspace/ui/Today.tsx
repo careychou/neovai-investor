@@ -1,3 +1,4 @@
+import './fullWidth.css'
 import { version } from '../logic'
 import MarketScanPanel from './MarketScanPanel'
 import { latestScan } from './marketScanData'

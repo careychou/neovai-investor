@@ -1,0 +1,10 @@
+/* Let every tab use the full window width instead of the app's 1100px cap. */
+.lu-screen {
+  max-width: none !important;
+  width: 100%;
+  box-sizing: border-box;
+}
+.lu-screen > * {
+  min-width: 0;
+  max-width: 100%;
+}

@@ -1,3 +1,4 @@
+import './fullWidth.css'
 import type { CSSProperties } from 'react'
 import { useState } from 'react'
 import { useApp, usePanelState, Blocks, Markdown, resolveData } from '@neovai/panel'
