@@ -16,6 +16,10 @@
     },
     {
       "type": "panel",
+      "file": "ui/TBillYield.tsx"
+    },
+    {
+      "type": "panel",
       "file": "ui/Today.tsx"
     },
     {

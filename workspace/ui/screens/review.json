@@ -2,7 +2,8 @@
   "title": "Performance",
   "order": 4,
   "skills": [
-    "performance-review"
+    "performance-review",
+    "user-preference"
   ],
   "blocks": [
     {
@@ -22,6 +23,10 @@
     {
       "type": "panel",
       "file": "ui/Portfolio.tsx"
+    },
+    {
+      "type": "panel",
+      "file": "ui/IncomeSleeve.tsx"
     },
     {
       "type": "markdown",

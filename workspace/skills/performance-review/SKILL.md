@@ -59,6 +59,17 @@ Round dollars to cents and percents to two decimals. Check: total value − budg
 
 Track the user's overall goal from `user-preference`: `overallProfitPct` profit on the whole budget. Say whether it is reached. Give today's and this week's P&L against the daily ($200) and weekly ($500) loss limits, and say plainly if either limit is hit. Flag any holding that breaks a rule: down more than 2%, up more than 20%, or cost basis over the per-stock cap (`maxPerStockUsd`).
 
+## 5b. Income sleeve
+
+Lots in SGOV, BIL, USFR or SHV (or any call marked as a sleeve call) are the income sleeve (user-preference rules 20 to 25). Build them from decisions.json the same way as other lots, but keep them apart:
+
+- List them under the sleeve, not under trading holdings. They do not count as open positions, and their closed parts do not count toward wins, losses or the win rate. They do count in invested, market value, cash, total value and the profit totals.
+- Get the 13-week T-bill yield from Yahoo `^IRX` (range=1y, interval=1wk): today, about 3 months ago, and the trend (rising if more than 0.10 points higher than 3 months ago, falling if more than 0.10 lower, else flat). If you cannot fetch it, write "no data" and use null.
+- Each fund's yield: its published 30-day SEC yield if you can fetch it, otherwise the T-bill yield, and say which. Estimated monthly interest = market value × yield ÷ 100 ÷ 12. Annual = monthly × 12.
+- Interest earned so far = sum over sleeve lots of cost basis × yield ÷ 100 × days held ÷ 365, as an estimate. Label it as an estimate. These funds pay interest monthly and their price drops slightly on the payout day, so the price change alone understates the return.
+- Reserve = 5 × the per-stock cap. Idle cash = cash − reserve (0 if negative). If idle cash is over $500, say in the note that it could earn about idle cash × yield ÷ 100 ÷ 12 per month in the sleeve.
+- Flag a sleeve fund that is down 2% from entry (rule 4).
+
 ## 6. Score the calls
 
 Read the record files and list each recommendation with its date, action, ticker, entry, target and stop. Mark each one:

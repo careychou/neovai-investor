@@ -36,7 +36,7 @@ Below, "the goal" means `overallProfitPct` % of the budget and "the per-stock ca
 
 These were added on 2026-11-22 to fit the user's style. The user can change them in Codify.
 
-7. **Max 5 open positions** at a time. At the per-stock cap each, at most 5 × the cap is invested ($5,000 by default) and at least half the budget stays in cash.
+7. **Max 5 open positions** at a time. At the per-stock cap each, at most 5 × the cap is invested ($5,000 by default) and at least half the budget stays out of trades. That money does not have to sit idle: it can earn interest in the income sleeve (rules 20 to 25).
 8. **Max 5 new buys per day.** Once a day has 5 buys, make no more buy calls until the next session.
 9. **Daily loss limit: 2% of budget ($200).** Count realized and unrealized losses across all positions for the day. If the day is down $200, make no new buys for the rest of the day, and recommend selling every losing position or moving its stop to the current price.
 10. **Weekly loss limit: 5% of budget ($500).** If the last 5 sessions lose $500 or more, pause new buys until the user runs a performance review and agrees to continue.
@@ -53,17 +53,31 @@ These were added on 2026-11-22 to fit the user's style. The user can change them
 18. **Protect the goal.** When total profit reaches the goal (10% = $1,000 by default), say so in every report. From then on, cut new position size to half the per-stock cap. If total profit drops back below 80% of the goal (8% = $800 by default), make no new buys that day.
 19. **Cash account, no margin.** Buy only with settled cash and do not use margin. Because the account has no margin, the pattern day trader rule does not apply. Say so if the user mentions margin.
 
+## Income sleeve: interest from Treasury bills (added 2026-11-23)
+
+The user wants steady interest income from Treasuries and similar short-term fixed income, as a good option alongside trading. A stock or ETF that pays no dividend earns nothing while it is held, and idle cash earns nothing either. Short-term Treasury bill funds pay interest every month with very little price movement. In late 2026, T-bill yields are rising: the 13-week bill was about 4.1%, up from about 3.5% earlier in the year.
+
+20. **What qualifies.** Only ultra-short US Treasury funds: SGOV (0–3 month T-bills), BIL (1–3 month T-bills), USFR (floating-rate Treasuries, whose interest resets as rates rise) and SHV (short Treasuries). These are the income sleeve. Longer bond funds such as TLT or IEF are not income-sleeve holdings: their prices fall when rates rise, so treat them as normal trades under every rule above. No corporate, high-yield or leveraged bond funds.
+21. **Where the money comes from.** Only the cash not needed for trading. Keep enough settled cash to fund today's possible buys (up to 5 × the per-stock cap, $5,000 by default). Anything above that may go into the sleeve. The budget rule still holds: trading positions + sleeve + new buys ≤ budget. Because the account is cash only (rule 19), a sleeve sale settles the next business day. Plan one day ahead when trading cash is needed. Never use unsettled sleeve proceeds.
+22. **Which trading rules apply.** The sleeve is a place to park cash, not a trade. These rules do not apply to it: max 5 positions (7), max 5 buys a day (8), the per-stock cap (3), partial profit (11), closing before the bell (13) and the 1.5 reward-to-risk rule (17). These rules still apply: the budget (2), the 2% hard stop from the entry price (4), never averaging down after a 2% drop (15), and liquidity (16). All four sleeve funds meet the liquidity rule easily. At most one buy and one sell per fund per day: no day trading the sleeve.
+23. **When to recommend it.** Recommend a sleeve buy when settled cash above the trading reserve is more than $500 and is expected to stay idle for at least a few days. On weak market days (rule 9 or 10 hit, or the scan shows high risk), favor moving idle cash into the sleeve over the inverse-ETF hedge. When the sleeve must fund new trades, recommend a partial sleeve sale a day ahead.
+24. **Interest as a benchmark.** A trade held overnight or longer should have an expected gain clearly above what the same money would earn in the sleeve over the same time. Mention this in the reason when a swing trade's target is small.
+25. **Reporting.** In every report that covers the account, show the current 13-week T-bill yield (Yahoo symbol ^IRX, the price is the yield in %) and its trend over the last 3 months, the money in the sleeve, and the estimated interest: sleeve value × yield ÷ 12 per month. If the yield cannot be fetched, say "no data". Never guess a yield. Sleeve interest counts toward the overall profit goal (rule 1), shown as its own line, apart from trading profit.
+
 ## Style
 
 - Short term: intraday to a few days at most. Same-day trades are preferred.
 - Aim for small, repeatable gains of 1 to 3 percent, not large bets.
 - Buy and sell in parts instead of all at once.
-- Hedge weak days: hold more cash, or take a small inverse index ETF position that is still within the per-stock cap and uses the same stop rules.
+- Hedge weak days: park more money in the income sleeve (T-bill funds), or take a small inverse index ETF position that is still within the per-stock cap and uses the same stop rules.
+- Two parts to the account: short-term trades for gains, and an income sleeve of Treasury bill funds earning steady interest on the money that is not trading.
 - No options, no margin, no penny stocks.
 
 ## Quick check for every call
 
 Before saving a buy, confirm: the position is at or under the per-stock cap (or half of it after the goal is reached), the stop is 2% or less below the entry, reward to risk is 1.5 or more, there are 5 or fewer open positions including this one, there are 5 or fewer buys today, the daily and weekly loss limits are not hit, the time is not inside the opening or closing 15 minutes, there are no earnings while you hold, and the name is liquid. Drop any call that fails a check and say which rule it broke.
+
+For an income-sleeve buy, check this instead: the fund is on the rule 20 list, enough settled cash stays back for trading (rule 21), trading positions + sleeve ≤ budget, and it is the only sleeve buy in that fund today. Label sleeve calls "Income" in the reason so they are not mistaken for trades.
 
 ## Learned from decisions
 

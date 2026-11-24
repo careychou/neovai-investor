@@ -38,6 +38,18 @@ For each position the user still holds, pick one:
 - Stop no more than 2% below the entry. The first target is at least +3%.
 - The total of open positions and new buys may not be more than the budget. If the budget can't fit another buy, stop adding buys and say so.
 
+## Income sleeve
+
+After the trading calls, decide on the income sleeve (user-preference rules 20 to 25). These calls are separate from trading calls and are shown in their own Income group.
+
+- Work out settled cash after today's trading calls. Reserve = 5 × the per-stock cap ($5,000 by default). Idle cash = settled cash − reserve.
+- Buy: if idle cash is more than $500 and is likely to stay idle for a few days, recommend buying one sleeve fund with most of it (whole shares, leave a small buffer). Prefer SGOV for simplicity; prefer USFR when T-bill yields are rising (its interest resets up). Use the yield trend from the market scan's rates.
+- Sell part: if tomorrow's likely trading buys need more settled cash than is outside the sleeve, recommend selling just enough sleeve shares today (the sale settles next business day).
+- Sell all: if a sleeve fund is down 2% from its entry (rule 4), or the user's preferences no longer allow it.
+- On weak days (risk-off mood, or a loss limit hit), lean toward the sleeve rather than new trades or the inverse-ETF hedge.
+- At most one income buy and one income sell per fund per day. No income call when nothing changes: do not pad.
+- Every income call's reason starts with "Income:" and gives the yield and the estimated monthly interest in dollars.
+
 ## Output
 
 Three groups, each possibly empty, shown on the Recommendations screen where the user accepts or declines each call:
@@ -45,6 +57,7 @@ Three groups, each possibly empty, shown on the Recommendations screen where the
 - New stocks: Buy calls.
 - Sell: Sell part and Sell all calls.
 - Change: Raise stop, Lower target, Add or Hold calls on positions the user keeps.
+- Income: Buy, Sell part or Sell all calls on income sleeve funds (SGOV, BIL, USFR, SHV) only.
 
 One block for each call:
 

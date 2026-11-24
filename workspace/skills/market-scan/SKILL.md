@@ -10,6 +10,7 @@ Use the web fetch tool. Give every number its source and the time you read it.
 
 - Indexes: S&P 500, Nasdaq, Dow and Russell 2000, with level and percent change.
 - Risk metrics: VIX and the 10-year Treasury yield.
+- Interest rates for the income sleeve: the 13-week T-bill yield (Yahoo `^IRX`, the price is the yield in %) today, about 3 months ago and about 1 year ago, and whether it is rising, falling or flat. Say in one line what it means for parking idle cash in T-bill funds (user-preference rules 20 to 25).
 - Major news: the three to five stories moving the market today.
 - Alerts: earnings due today and tomorrow, big movers, trading halts, analyst upgrades and downgrades.
 - Sectors: which are leading and which are lagging.

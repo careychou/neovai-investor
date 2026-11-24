@@ -5,6 +5,10 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 
 import { RefreshCw, Square, CheckCircle2, AlertCircle, Loader2, X, ChevronRight } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useCompanyName, companyNews } from './lib/companyNews'
+import { isSleeve, fmtUsd, fmtPct } from './lib/tbill'
+
+type Group = 'Buy' | 'Sell' | 'Change' | 'Income'
+const INCOME_TONE = '#c9a227'
 
 export function CompanyName({ ticker, rec, style }: { ticker: string; rec?: Record<string, unknown> | null; style?: CSSProperties }) {
   const name = useCompanyName(ticker, rec)
@@ -52,7 +56,8 @@ const pct = (a: unknown, b: unknown): string => {
 const sameTicker = (o: AnyObj, t: string) => String(o.ticker ?? '').toUpperCase() === t.toUpperCase()
 
 /** How many shares, at what price, and what it costs or returns. */
-function orderLine(rec: Rec, group: 'Buy' | 'Sell' | 'Change', held: AnyObj | undefined): { text: string; tone: string } {
+function orderLine(rec: Rec, groupIn: Group, held: AnyObj | undefined): { text: string; tone: string } {
+  const group: Group = groupIn === 'Income' ? (/sell/i.test(String(rec.action ?? '')) ? 'Sell' : 'Buy') : groupIn
   const entry = num(rec.entry)
   const heldShares = num(held?.shares)
   const action = String(rec.action ?? '')
@@ -244,9 +249,13 @@ export default function RecommendationsPanel() {
   const holdings = asObjs(resolveData(app.data, 'review.holdings'))
 
   const picks = (resolveData(app.data, 'picks') ?? {}) as Record<string, unknown>
-  const buys = asList(picks.buys)
-  const sells = asList(picks.sells)
-  const changes = asList(picks.changes)
+  // Treasury bill funds always show under Income, even if a run put them in a trading group.
+  const rawBuys = asList(picks.buys), rawSells = asList(picks.sells), rawChanges = asList(picks.changes)
+  const buys = rawBuys.filter(r => !isSleeve(r))
+  const sells = rawSells.filter(r => !isSleeve(r))
+  const changes = rawChanges.filter(r => !isSleeve(r))
+  const income = [...asList(picks.income), ...[...rawBuys, ...rawSells, ...rawChanges].filter(r => isSleeve(r))]
+  const sleeveHoldings = asObjs(resolveData(app.data, 'review.income.holdings'))
 
   const running = app.isRunning(JOB)
   const step = app.step(JOB)
@@ -259,6 +268,7 @@ export default function RecommendationsPanel() {
     ...sells.map(r => ({ ...r, group: 'Sell' })),
     ...buys.map(r => ({ ...r, group: 'Buy' })),
     ...changes.map(r => ({ ...r, group: 'Change' })),
+    ...income.map(r => ({ ...r, group: 'Income' })),
   ]
     .filter(r => r.ticker)
     .map(r => ({
@@ -268,24 +278,25 @@ export default function RecommendationsPanel() {
       group: r.group,
     }))
 
-  const colorOf = (g: string) => (g === 'Sell' ? 'var(--bad)' : g === 'Buy' ? 'var(--ok)' : 'var(--accent)')
+  const colorOf = (g: string) => (g === 'Sell' ? 'var(--bad)' : g === 'Buy' ? 'var(--ok)' : g === 'Income' ? INCOME_TONE : 'var(--accent)')
 
   const recBlock = (title: string, key: string, list: Rec[]) =>
     list.length > 0
-      ? [{ type: 'recommendations', title: `${title} (${list.length})`, data: `picks.${key}`, decide: true }]
+      ? [{ type: 'recommendations', title: `${title} (${list.length})`, items: list, decide: true, key }]
       : []
 
-  const blocks = [...recBlock('Sell', 'sells', sells), ...recBlock('New stocks', 'buys', buys), ...recBlock('Change', 'changes', changes)]
+  const blocks = [...recBlock('Sell', 'sells', sells), ...recBlock('New stocks', 'buys', buys), ...recBlock('Change', 'changes', changes), ...recBlock('Income', 'income', income)]
   const canDecide = typeof app.decide === 'function'
   const callDate = typeof picks.date === 'string' ? picks.date : undefined
 
-  const card = (rec: Rec, group: 'Buy' | 'Sell' | 'Change', i: number) => {
+  const card = (rec: Rec, group: Group, i: number) => {
     const t = String(rec.ticker ?? '')
-    const held = holdings.find(h => sameTicker(h, t))
+    const held = (group === 'Income' ? sleeveHoldings : holdings).find(h => sameTicker(h, t))
+    const inc = rec as Rec & { yieldPct?: unknown; monthlyIncomeUsd?: unknown }
     const order = orderLine(rec, group, held)
     const r = callDate && !rec.date ? { ...rec, date: callDate } : rec
     const choice = canDecide ? app.decisionOf(rec) : null
-    const pill = group === 'Sell' ? 'var(--bad)' : group === 'Buy' ? 'var(--ok)' : 'var(--accent)'
+    const pill = group === 'Income' ? INCOME_TONE : group === 'Sell' ? 'var(--bad)' : group === 'Buy' ? 'var(--ok)' : 'var(--accent)'
     return (
       <div key={`${t}-${i}`} style={{ border: `1px solid ${choice === 'accepted' ? 'var(--ok)' : 'var(--line)'}`, borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column', gap: 8, opacity: choice === 'declined' ? 0.6 : 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -296,17 +307,25 @@ export default function RecommendationsPanel() {
           >
             {t || '?'}<ChevronRight size={14} color="var(--muted)" />
           </button>
-          <span style={{ background: pill, color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>{rec.action ?? group}</span>
+          <span style={{ background: pill, color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>{group === 'Income' ? `Income · ${rec.action ?? 'Buy'}` : rec.action ?? group}</span>
           <span style={{ ...muted, marginLeft: 'auto' }}>{rec.confidence ?? ''}</span>
         </div>
         <CompanyName ticker={t} rec={rec as Record<string, unknown>} style={{ fontSize: 13, marginTop: -4 }} />
         <div style={{ borderLeft: `3px solid ${order.tone}`, background: 'rgba(127,127,127,0.08)', borderRadius: 6, padding: '6px 10px', fontWeight: 700, fontSize: 14 }}>
           {order.text}
         </div>
+        {group === 'Income' && (
+          <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
+            <span><span style={muted}>Yield </span><b>{fmtPct(num(inc.yieldPct))}</b></span>
+            <span><span style={muted}>Est. interest </span><b style={{ color: 'var(--ok)' }}>{num(inc.monthlyIncomeUsd) == null ? 'no data' : `${fmtUsd(num(inc.monthlyIncomeUsd))}/mo`}</b></span>
+          </div>
+        )}
         {rec.reason && <div style={{ fontSize: 14, lineHeight: 1.45 }}>{rec.reason}</div>}
-        <div style={muted}>
+        {group === 'Income' ? (
+          <div style={muted}>Price {usd(rec.entry)} · Safety stop {usd(rec.stop)} {pct(rec.stop, rec.entry)} · Sale settles next business day</div>
+        ) : <div style={muted}>
           Entry {usd(rec.entry)} · Target {usd(rec.target)} {pct(rec.target, rec.entry)} · Stop {usd(rec.stop)} {pct(rec.stop, rec.entry)}
-        </div>
+        </div>}
         {canDecide && (
           <div style={{ display: 'flex', gap: 8, marginTop: 'auto', alignItems: 'center' }}>
             <button className={choice === 'accepted' ? 'button primary' : choice ? 'button' : 'button primary'} onClick={() => app.decide!(rec, choice === 'accepted' ? null : 'accepted')}>
@@ -322,10 +341,11 @@ export default function RecommendationsPanel() {
     )
   }
 
-  const group = (title: string, list: Rec[], g: 'Buy' | 'Sell' | 'Change') =>
+  const group = (title: string, list: Rec[], g: Group, note?: string) =>
     list.length === 0 ? null : (
       <div style={{ marginBottom: 16 }}>
-        <div style={{ ...muted, fontSize: 13, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8 }}>{title} ({list.length})</div>
+        <div style={{ ...muted, fontSize: 13, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: note ? 2 : 8 }}>{title} ({list.length})</div>
+        {note && <div style={{ ...muted, marginBottom: 8 }}>{note}</div>}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
           {list.map((r, i) => card(r, g, i))}
         </div>
@@ -404,8 +424,12 @@ export default function RecommendationsPanel() {
           <span><b>{buys.length}</b> new</span>
           <span><b>{sells.length}</b> sells</span>
           <span><b>{changes.length}</b> changes</span>
+          <span><b>{income.length}</b> income</span>
           {typeof picks.cash === 'string' && <span style={{ color: 'var(--muted)' }}>Cash: {picks.cash}</span>}
         </div>
+        {typeof picks.incomeNote === 'string' && picks.incomeNote && (
+          <div style={{ fontSize: 13, marginTop: 6, borderLeft: `3px solid ${INCOME_TONE}`, paddingLeft: 8 }}><span style={muted}>Income: </span>{picks.incomeNote}</div>
+        )}
       </div>
 
       {/* Confidence chart */}
@@ -414,7 +438,7 @@ export default function RecommendationsPanel() {
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
             Confidence per ticker{' '}
             <span style={muted}>
-              (<span style={{ color: 'var(--ok)' }}>buy</span> · <span style={{ color: 'var(--bad)' }}>sell</span> · <span style={{ color: 'var(--accent)' }}>change</span>)
+              (<span style={{ color: 'var(--ok)' }}>buy</span> · <span style={{ color: 'var(--bad)' }}>sell</span> · <span style={{ color: 'var(--accent)' }}>change</span> · <span style={{ color: INCOME_TONE }}>income</span>)
             </span>
           </div>
           <ResponsiveContainer width="100%" height={Math.max(90, chartData.length * 26 + 30)}>
@@ -443,6 +467,7 @@ export default function RecommendationsPanel() {
               {group('Sell', sells, 'Sell')}
               {group('New stocks', buys, 'Buy')}
               {group('Change', changes, 'Change')}
+              {group('Income: Treasury bills', income, 'Income', 'Parks cash that is not needed for trading in Treasury bill funds for steady monthly interest. Not counted in the 5-position or 5-buys-a-day limits.')}
               <div style={muted}>Click a ticker for its details and top news. Prices are limit prices from the last fetch; check them before you place an order.</div>
             </>
           ) : (
