@@ -13,7 +13,7 @@ const usd = (v: number) => `${v < 0 ? '-' : ''}$${Math.abs(v).toLocaleString(und
 const box: CSSProperties = { border: '1px solid rgba(127,127,127,0.3)', borderRadius: 10, padding: 16, margin: '12px 0' }
 const small: CSSProperties = { fontSize: 12, opacity: 0.7 }
 const grid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 10 }
-const GROUPS: RuleGroup[] = ['Goal', 'Risk', 'Profit', 'Sizing', 'Timing', 'Universe']
+const GROUPS: RuleGroup[] = ['Goal', 'Risk', 'Profit', 'Sizing', 'Timing', 'Universe', 'Long-term']
 
 function Bar({ pct, color }: { pct: number; color: string }) {
   return (
@@ -51,9 +51,9 @@ export default function Preferences({ goals, data }: { goals: Goals | null; data
 
   const conflicts: string[] = []
   if (goals && goals.lossLimitPct > HARD_STOP_PCT)
-    conflicts.push(`Your loss limit is ${goals.lossLimitPct}%. The stricter ${HARD_STOP_PCT}% hard stop applies.`)
+    conflicts.push(`Your loss limit is ${goals.lossLimitPct}%. The stricter ${HARD_STOP_PCT}% hard stop applies to trades; long holds use an 8–10% stop capped at your limit.`)
   if (goals && goals.earningCapPct !== MUST_SELL_PCT)
-    conflicts.push(`Your take-profit is ${goals.earningCapPct}%. ${goals.earningCapPct < MUST_SELL_PCT ? `Jobs will sell everything at +${goals.earningCapPct}%, before the +${MUST_SELL_PCT}% rule.` : `The +${MUST_SELL_PCT}% must-sell rule still applies.`}`)
+    conflicts.push(`Your take-profit is ${goals.earningCapPct}%. ${goals.earningCapPct < MUST_SELL_PCT ? `Jobs will sell everything at +${goals.earningCapPct}%, before the +${MUST_SELL_PCT}% rule.` : `The +${MUST_SELL_PCT}% must-sell rule still applies to trades.`}`)
   if (goals && goals.budget !== 10000) conflicts.push(`Your budget is $${goals.budget.toLocaleString()}. Your rule says $10,000; the smaller one applies.`)
 
   const color = progress >= 100 ? '#2e9e5b' : progress >= 0 ? '#3b82f6' : '#d64545'

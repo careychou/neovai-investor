@@ -25,6 +25,19 @@ Use the web fetch tool. Give every number its source and the time you read it.
 5. Suggest an action only when the news matters, using the user-preference rules: for example "Sell all: earnings before next session (no earnings while holding)", "Tighten stop to entry", "Watch: stop at risk if it opens lower", or "Hold: supports the thesis". Use "" when the news doesn't call for an action. This is a flag for the recommendation step, not a trade call.
 6. Any `bad` item with an action also goes in `alerts` (level `bad` or `warn`), naming the ticker.
 
+## Hidden jewels for the long bucket
+
+The crowd chases what is already on the front page. The long bucket (user-preference rules 26 to 33) wants good businesses few people are watching. Find them on every scan:
+
+1. **Screen.** Fetch the finviz screener with a browser-like request: `https://finviz.com/screener.ashx?v=111&f=<filters>`. Tickers appear in the page as `quote.ashx?t=XYZ&`. Useful filter sets:
+   - Quality at a fair price: `cap_smallover,cap_midunder,fa_roe_o15,fa_pe_u25,fa_debteq_u0.5,fa_salesqoq_o10,sh_avgvol_o500,ta_sma200_pa`
+   - Cash machines: `cap_smallover,fa_fcf_o5,fa_curratio_o1.5,fa_debteq_u0.5,sh_avgvol_o300`
+   - Insider buying: `cap_smallover,it_latestbuys,sh_avgvol_o300` (or `openinsider.com/latest-cluster-buys`)
+   - Beaten-down quality: `cap_smallover,fa_roe_o15,ta_highlow52w_b0to10h,sh_avgvol_o300` (within 10% of a 52-week low)
+2. **Check.** For the best 8 to 12, read `stockanalysis.com/stocks/<ticker>/statistics/`: market cap, P/E, PEG, P/FCF, FCF yield, ROIC, debt/EBITDA, Piotroski F-score, analyst count, short interest (% float), RSI, 200-day average. Keep names that meet most of rule 26.
+3. **Under-followed.** Prefer 8 or fewer analysts and low institutional ownership. Skip anything all over the news this week.
+4. **Hype flag.** Mark a name `hype: true` when RSI is above 75, short interest is above 15% of float, or it is up more than 15% in a week on news or social buzz. Hype is only for the trade bucket with a quick exit.
+
 ## Rules
 
 - If a source fails, try one other source. If that fails too, write "no data" for that item. Never guess a number.
@@ -35,7 +48,7 @@ Use the web fetch tool. Give every number its source and the time you read it.
 - Mood: one line, risk-on, mixed or risk-off, with the reason.
 - Metrics table: item, value, change, source, time.
 - News and alerts: short bullets.
-- Watch list: at least 20 liquid US stocks or ETFs worth evaluating, each with the reason it stood out. The recommendation step needs about 10 calls after candidate evaluation drops some, so keep the list wide.
+- Watch list: at least 20 US stocks or ETFs worth evaluating, each with the reason it stood out and its bucket. At least 8 should be `long` ideas from the hidden-jewel screen and at least 10 should be liquid `trade` names. The recommendation step needs about 10 calls after candidate evaluation drops some, so keep the list wide.
 
 ## Today panel
 
@@ -60,5 +73,7 @@ Keep this list up to date. After each scan, add any source that returned good da
 - CNBC daily market live blog (`cnbc.com/<date>/stock-market-today-live-updates.html`, linked from cnbc.com/markets): index closes, VIX notes, Fed news, analyst calls. Read from start_index about 5000.
 - CNBC stocks moving the most (`cnbc.com/<date>/stocks-moving-the-most-today-live-updates.html`): big movers and upgrades.
 - CNBC quote pages (`cnbc.com/quotes/.VIX`, `.RUT`, `US10Y`, `.SPX`, `.IXIC`, `.DJI`): last value and change at about start_index 6000.
+- finviz screener (`finviz.com/screener.ashx?v=111&f=...`): works with a browser user agent; about 20 tickers a page (added 2026-11-24).
+- stockanalysis statistics (`stockanalysis.com/stocks/<ticker>/statistics/`): valuation, quality, analyst count, short interest, RSI. Funds have no statistics page (added 2026-11-24).
 
 Failed (first time, 2026-11-22): finance.yahoo.com/markets (fetch failed), stooq.com CSV (404), cnbc.com/us-markets and /pre-markets (empty), cnbc.com/earnings (no calendar text). Next time try a different earnings calendar source.

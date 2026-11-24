@@ -18,12 +18,18 @@ Before you finish, call save_data with the name "picks" and this shape. Every ca
   "date": "YYYY-MM-DD",
   "basedOn": "one line: which market scan and candidates these calls used, with their dates, e.g. Reused candidates from 2026-11-21 (market scan 2026-11-21).",
   "summary": "two to four sentences in markdown",
-  "buys": [{ "ticker": "ABC", "name": "ABC Corp.", "action": "Buy", "reason": "one or two lines", "confidence": "high | medium | low", "confidenceReason": "one line: why this confidence level", "entry": 0, "target": 0, "stop": 0, "shares": 0 }],
-  "sells": [{ "ticker": "XYZ", "name": "XYZ Inc.", "action": "Sell part | Sell all", "reason": "one or two lines", "confidence": "high | medium | low", "entry": 0, "target": 0, "stop": 0, "shares": 0 }],
-  "changes": [{ "ticker": "XYZ", "name": "XYZ Inc.", "action": "Raise stop | Lower target | Add | Hold", "reason": "what changes and why", "confidence": "high | medium | low", "entry": 0, "target": 0, "stop": 0, "shares": 0, "heldShares": 0 }],
+  "buys": [{ "ticker": "ABC", "name": "ABC Corp.", "action": "Buy", "bucket": "long | trade", "horizon": "intraday | days | 6-24 months", "thesis": "long only, else omit", "reason": "one or two lines", "confidence": "high | medium | low", "confidenceReason": "one line: why this confidence level", "entry": 0, "target": 0, "stop": 0, "shares": 0 }],
+  "sells": [{ "ticker": "XYZ", "name": "XYZ Inc.", "action": "Sell part | Sell all", "bucket": "long | trade", "horizon": "intraday | days | 6-24 months", "thesis": "long only, else omit", "reason": "one or two lines", "confidence": "high | medium | low", "entry": 0, "target": 0, "stop": 0, "shares": 0 }],
+  "changes": [{ "ticker": "XYZ", "name": "XYZ Inc.", "action": "Raise stop | Lower target | Add | Hold", "bucket": "long | trade", "horizon": "intraday | days | 6-24 months", "thesis": "long only, else omit", "reason": "what changes and why", "confidence": "high | medium | low", "entry": 0, "target": 0, "stop": 0, "shares": 0, "heldShares": 0 }],
   "income": [{ "ticker": "SGOV", "name": "iShares 0-3 Month Treasury Bond ETF", "action": "Buy | Sell part | Sell all", "sleeve": true, "reason": "Income: one or two lines (idle cash, yield trend, or cash needed for trades tomorrow)", "confidence": "high | medium | low", "entry": 0, "target": 0, "stop": 0, "shares": 0, "heldShares": 0, "yieldPct": 4.1, "monthlyIncomeUsd": 0 }],
   "incomeNote": "one line: settled cash above the trading reserve, the T-bill yield and trend, and why income calls were or were not made",
   "cash": "cash left after these calls",
+  "buckets": {
+    "long": { "capUsd": 4000, "usedUsd": 0, "afterUsd": 0 },
+    "trade": { "capUsd": 4000, "usedUsd": 0, "afterUsd": 0 },
+    "income": { "capUsd": 2000, "usedUsd": 0, "afterUsd": 0 }
+  },
+  "bucketNote": "one line: how the three buckets stand after these calls and any risk metric that shaped them",
   "counts": [
     { "label": "New stocks", "value": 0 },
     { "label": "Sells", "value": 0 },
@@ -37,7 +43,9 @@ Income calls: follow the income sleeve rules (rules 20 to 25 in the user-prefere
 
 Shares: every call needs a whole-number "shares". For a buy it is the number to buy at "entry" (sized by the recommendation skill). For a sell it is the number to sell ("Sell all" = every share held; "Sell part" = the part to sell, usually half). For a change it is the number to add for "Add", or 0 for any other change. Put the shares currently held in "heldShares" (from accepted decisions and review.json). "entry" is the limit price for the order. The Recommendations screen shows each order as "Buy N shares at $entry".
 
-Every call must follow the user-preference rules: at most $1,000 per stock, a stop no more than 2% below the entry, sell all above +20%, sell half at +3%, at most 5 open positions and at most 5 buys per day, no buys when the daily ($200) or weekly ($500) loss limit is hit, and no buys in the first or last 15 minutes of the session. Say in "summary" which cap or limit stopped more buys, if any. Never add a ticker that failed evaluation. Every buy must have "confidence" (exactly "high", "medium" or "low") and a one-line "confidenceReason".
+Buckets: "capUsd" is 40%, 40% and 20% of the budget; "usedUsd" is the money in that bucket now at entry prices (open app positions only, not holdings added by hand); "afterUsd" is after today's calls. "afterUsd" may not exceed "capUsd" for long or trade.
+
+Every trade call must follow the user-preference rules: at most $1,000 per stock, a stop no more than 2% below the entry, sell all above +20%, sell half at +3%, at most 5 open positions and at most 5 buys per day, no buys when the daily ($200) or weekly ($500) loss limit is hit, and no buys in the first or last 15 minutes of the session. Long calls follow rules 26 to 33 instead: up to 1.5 × the per-stock cap, a stop 8 to 10% below the entry, a thesis, and no hype names. Say in "summary" which cap or limit stopped more buys, if any. Never add a ticker that failed evaluation. Every buy must have "confidence" (exactly "high", "medium" or "low") and a one-line "confidenceReason".
 
 "counts" values must equal the number of items in buys, sells, changes and income (0 when a list is empty).
 

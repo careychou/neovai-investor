@@ -272,3 +272,57 @@ export const pctNumber = (s: string | undefined): number | null => {
   const m = s?.match(/-?[\d.]+/)
   return m ? Number(m[0]) : null
 }
+
+/** Key statistics page for a stock (valuation, quality, risk, ownership, growth). */
+export const statsUrl = (symbol: string) => `${SA}/stocks/${cleanTicker(symbol).toLowerCase()}/statistics/`
+
+export const STAT_IDS = [
+  'marketcap', 'pe', 'peForward', 'pegRatio', 'pfcf', 'evEbitda',
+  'roic', 'roe', 'grossMargin', 'operatingMargin', 'fcfMargin', 'fcfYield', 'debtEquity', 'debtEbitda', 'zScore', 'fScore',
+  'beta', 'rsi', 'sma50', 'sma200', 'ch1y', 'averageVolume', 'shortFloat',
+  'sharesInstitutions', 'sharesInsiders', 'analystCount', 'analystRatings', 'priceTarget',
+  'revenue3y', 'eps3y', 'dividendYield', 'dividendGrowthYears', 'earningsdate',
+] as const
+export type StatId = typeof STAT_IDS[number]
+export type Stats = Partial<Record<StatId, string>>
+
+/** Reads `{id:"pe",title:"PE Ratio",value:"39.03"}` entries from a stockanalysis statistics page. */
+export function parseStats(html: string): Stats {
+  const out: Stats = {}
+  for (const id of STAT_IDS) {
+    const m = html.match(new RegExp(`\\{id:"${id}",title:${STR},value:${STR}`))
+    const v = m ? unescape(m[2]) : undefined
+    if (v && v !== 'n/a' && v !== '-') out[id] = v
+  }
+  return out
+}
+
+/** "39.66B" → 39_660_000_000, "1,234" → 1234, "13.45%" → 13.45. */
+export function statNumber(s: string | undefined): number | null {
+  if (!s) return null
+  const m = s.replace(/[,$]/g, '').match(/^([+-]?[\d.]+)\s*([KMBT])?/i)
+  if (!m) return null
+  const mult = { K: 1e3, M: 1e6, B: 1e9, T: 1e12 }[(m[2] ?? '').toUpperCase() as 'K'] ?? 1
+  return Number(m[1]) * mult
+}
+
+export interface StatFlag { label: string; tone: 'good' | 'bad' | 'neutral' }
+
+/** Plain checks behind the long-term "hidden jewel" screen (user-preference rules 26 to 32). */
+export function jewelFlags(s: Stats, price: number | null = null): StatFlag[] {
+  const f: StatFlag[] = []
+  const n = (id: StatId) => statNumber(s[id])
+  const cap = n('marketcap'), analysts = n('analystCount'), roic = n('roic'), fcfY = n('fcfYield'), peg = n('pegRatio')
+  const dE = n('debtEbitda'), fs = n('fScore'), rsi = n('rsi'), short = n('shortFloat'), sma200 = n('sma200')
+  if (cap != null) f.push({ label: cap < 3e8 ? 'Micro cap' : cap <= 2e10 ? 'Small/mid cap' : 'Large cap', tone: cap >= 3e8 && cap <= 2e10 ? 'good' : 'neutral' })
+  if (analysts != null) f.push({ label: analysts <= 8 ? `Under-followed (${analysts} analysts)` : `${analysts} analysts`, tone: analysts <= 8 ? 'good' : 'neutral' })
+  if (roic != null) f.push({ label: `ROIC ${roic}%`, tone: roic >= 12 ? 'good' : roic < 5 ? 'bad' : 'neutral' })
+  if (fcfY != null) f.push({ label: `FCF yield ${fcfY}%`, tone: fcfY >= 4 ? 'good' : fcfY <= 0 ? 'bad' : 'neutral' })
+  if (peg != null) f.push({ label: `PEG ${peg}`, tone: peg > 0 && peg < 1.5 ? 'good' : peg >= 3 ? 'bad' : 'neutral' })
+  if (dE != null) f.push({ label: `Debt/EBITDA ${dE}`, tone: dE < 3 ? 'good' : dE > 5 ? 'bad' : 'neutral' })
+  if (fs != null) f.push({ label: `Piotroski ${fs}/9`, tone: fs >= 6 ? 'good' : fs <= 3 ? 'bad' : 'neutral' })
+  if (price != null && sma200 != null) f.push({ label: price >= sma200 ? 'Above 200-day' : 'Below 200-day', tone: price >= sma200 ? 'good' : 'bad' })
+  const hype = (rsi != null && rsi > 75) || (short != null && short > 15)
+  if (hype) f.push({ label: `Hype risk${rsi != null && rsi > 75 ? ` · RSI ${rsi}` : ''}${short != null && short > 15 ? ` · short ${short}%` : ''}`, tone: 'bad' })
+  return f
+}

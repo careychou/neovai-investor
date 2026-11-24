@@ -1,5 +1,5 @@
 /** The user's trading rules, mirrored from skills/user-preference/SKILL.md. Keep both in sync. */
-export type RuleGroup = 'Goal' | 'Risk' | 'Profit' | 'Sizing' | 'Timing' | 'Universe'
+export type RuleGroup = 'Goal' | 'Risk' | 'Profit' | 'Sizing' | 'Timing' | 'Universe' | 'Long-term'
 
 export interface Rule { n: number; group: RuleGroup; title: string; value: string; detail: string; added?: boolean }
 
@@ -32,8 +32,16 @@ export const RULES: Rule[] = [
   { n: 17, group: 'Profit', title: 'Reward to risk', value: '≥ 1.5', detail: 'With a 2% stop, the first target is at least +3%.', added: true },
   { n: 18, group: 'Goal', title: 'Protect the goal', value: '$500 size', detail: 'At +10%, buy $500 positions. Below +8% after that, no new buys that day.', added: true },
   { n: 19, group: 'Universe', title: 'Cash account', value: 'No margin', detail: 'Buy only with settled cash.', added: true },
+  { n: 26, group: 'Long-term', title: 'Hidden jewels', value: '$300M–$20B', detail: 'Profitable, few analysts, ROIC ≥ 12%, FCF yield ≥ 4%, PEG < 1.5, low debt. No hype names.', added: true },
+  { n: 27, group: 'Long-term', title: 'Entry and thesis', value: '> 200-day', detail: 'Above the 200-day average, or near a 52-week low with insiders buying. One-line thesis.', added: true },
+  { n: 28, group: 'Long-term', title: 'Long stop', value: '-8% to -10%', detail: 'Or a weekly close under the 200-day average. Replaces the 2% stop for long holds.', added: true },
+  { n: 29, group: 'Long-term', title: 'Long size', value: '1.5× cap', detail: 'Up to $1,500 a position; the long bucket stays under 40% of the budget. Buy in two parts.', added: true },
+  { n: 30, group: 'Long-term', title: 'Earnings', value: 'May hold', detail: 'Hold through earnings while the thesis is intact; exit if the report breaks it.', added: true },
+  { n: 31, group: 'Long-term', title: 'Long profit', value: '⅓ at +30%', detail: 'No forced sale at +20%. Sell a third at +30%, trail the rest 15%.', added: true },
+  { n: 32, group: 'Long-term', title: 'Long positions', value: '4', detail: 'Counted apart from the 5 trade positions.', added: true },
+  { n: 33, group: 'Long-term', title: 'Weekly check', value: 'Weekly', detail: 'And after each earnings report: thesis true, stop safe, size under the cap.', added: true },
 ]
 
 export const GROUP_COLOR: Record<RuleGroup, string> = {
-  Goal: '#3b82f6', Risk: '#d64545', Profit: '#2e9e5b', Sizing: '#8b5cf6', Timing: '#e0a030', Universe: '#7a8794',
+  Goal: '#3b82f6', Risk: '#d64545', Profit: '#2e9e5b', Sizing: '#8b5cf6', Timing: '#e0a030', Universe: '#7a8794', 'Long-term': '#0f9d9a',
 }

@@ -19,11 +19,15 @@ export const LEGACY = [
  */
 export const SHIPPED: Record<string, string[]> = {
   'jobs/daily.md': ['3f3187cf477640082d52552e0882262794e03a44e9a81062adda000110d791e7'],
-  'jobs/review.md': ['6657031cd97ceb3dcff48c5adbff2d02b650fe5493c91561ff645e16bc33bfbd'],
-  'skills/user-preference/SKILL.md': ['228d595788ab411edae1a9674735d5ee54647480d95c21e6ead468c507e8fbba'],
-  'skills/performance-review/SKILL.md': ['7ebf45300cf0c427173ecfb840b3b98db8d0dd97af0ca2131d08b82b94020b18'],
+  'jobs/review.md': ['6657031cd97ceb3dcff48c5adbff2d02b650fe5493c91561ff645e16bc33bfbd', 'e4d4ae58b7fbeeccfa665ce78feb14788dec313af99bc47fa289702efb2b0497'],
+  'skills/user-preference/SKILL.md': ['228d595788ab411edae1a9674735d5ee54647480d95c21e6ead468c507e8fbba', 'ab5c853be9e2bd7913daaba0c772de6489143994c41b7e3f6c7d405a4719420e'],
+  'skills/performance-review/SKILL.md': ['7ebf45300cf0c427173ecfb840b3b98db8d0dd97af0ca2131d08b82b94020b18', '7e92898d6107db502106f87f43f4006da764742d429739157654952c40199d44'],
   'ui/screens/today.json': ['ccd8baf4f648c7807cdba874cc12cf0c263e4c998ae7cbee8206b68c20c3a71d'],
   'ui/screens/review.json': ['0fed471781101f0748a26b30db388008e15a74d7e8b8dd2f582f91778ccc3070'],
+  'jobs/recommend.md': ['bdcd01b980baf3924212cbdc088bbbc7340ec19a4d4c8e22182fce19ab0f850c'],
+  'jobs/scan.md': ['7976af7ac43b10946721d610f904605440823a5e293a8285e8c75ca5567ede68'],
+  'skills/market-scan/SKILL.md': ['6edf0a0f588c198615257e123f5ac600ef6c4e1dc74109e300fb8c405b3a22de'],
+  'skills/recommendation/SKILL.md': ['0361bbd875a2088c2879262fb75f60eb591e03e4fd85f353aee853acd4ece792'],
   'records/README.md': ['ee3ef121cdd6fbfbd51643ee994103c44fc23f4c58f7c690530c078e5e82d42b', '93ded19d9764858bd67d2926974af254d87b69be1f5310a0d378b8a9a48a1a17']
 }
 

@@ -46,6 +46,7 @@ Before you finish, call save_data with the name "review" and this shape:
     "reason": "why it was sold, short"
   }],
   "metrics": [{ "label": "Hit rate", "value": "4 of 6" }],
+  "riskMetrics": { "asOf": "YYYY-MM-DD", "days": 0, "vsSpyPct": 0, "alphaPct": 0, "beta": 0, "sharpe": 0, "sortino": 0, "maxDrawdownPct": 0, "volPct": 0, "winRatePct": null, "byBucket": [{ "bucket": "long | trade | income", "returnPct": 0, "winRatePct": null }], "note": "one line: what these numbers say about risk and what to change" },
   "outcomes": [{ "date": "YYYY-MM-DD", "ticker": "ABC", "action": "Buy", "decision": "accepted | declined | none", "entry": 0, "now": 0, "result": "+3.1%", "status": "open | target hit | stopped out" }],
   "manual": {
     "asOf": "YYYY-MM-DD HH:MM ET",
@@ -88,6 +89,7 @@ Rules:
 - All money and percent values are plain numbers (no "$" or "%"). Percents are in percent units (2.5 means 2.5%). Use null, never a guess, for a price you could not fetch, and write "no data" in `priceSource`.
 - `holdings` are the accepted Buys still open (one row per ticker). `closed` holds one row per closed part (Sell part or Sell all), newest sell first. Use empty lists when there are none.
 - `winRatePct` is null when there are no closed trades.
+- `riskMetrics` follows section 6b of the performance-review skill. Use null for any value with fewer than 5 trading days of history, and say so in its note.
 - Holdings added by hand (`records/data/holdings.json`) go only in `manual`, never in `holdings`, `closed` or `income`. They are extra money: leave them out of every `account`, `goal` and `income` number (cash, invested, totals, goal progress, win rate, loss limits). The Performance screen adds them to the account value itself. Always fill `manual`, with zeros and an empty list when the file is missing or empty. Use null and "no data" for any price you could not fetch.
 - `targetPct` is `overallProfitPct` from goals.json and `targetUsd` = budget × targetPct / 100 (the numbers above are examples at the defaults).
 - `goal` repeats the account numbers for the Preferences screen: `pct` = totalPct, `todayPnlUsd` = todayChangeUsd.

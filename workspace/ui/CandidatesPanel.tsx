@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react'
 import { useState } from 'react'
-import { useApp, resolveData } from '@neovai/panel'
+import { useApp, usePanelState, resolveData } from '@neovai/panel'
 import { ChevronRight } from 'lucide-react'
-import { TickerDetail, CompanyName } from './RecommendationsPanel'
+import { TickerDetail, CompanyName, BucketBadge } from './RecommendationsPanel'
 
 type AnyObj = Record<string, unknown>
 
@@ -48,7 +48,11 @@ function TickerCell({ ticker, row, onOpen }: { ticker: string; row: AnyObj; onOp
 export default function CandidatesPanel() {
   const app = useApp()
   const data = app.data as AnyObj
-  const ranked = asObjs(resolveData(data, 'candidates.ranked'))
+  const all = asObjs(resolveData(data, 'candidates.ranked'))
+  const [show, setShow] = usePanelState<'all' | 'long' | 'trade'>('candidates.bucket', 'all')
+  const isLong = (r: AnyObj) => String(r.bucket ?? '').toLowerCase().startsWith('long')
+  const ranked = show === 'all' ? all : all.filter(r => (show === 'long') === isLong(r))
+  const nLong = all.filter(isLong).length
   const dropped = asObjs(resolveData(data, 'candidates.dropped'))
   const [open, setOpen] = useState<string | null>(null)
 
@@ -59,7 +63,14 @@ export default function CandidatesPanel() {
 
   return (
     <div style={{ color: 'var(--text)' }}>
-      <div style={title}>Ranked ({ranked.length})</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div style={title}>Ranked ({ranked.length})</div>
+        <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+          {([['all', `All ${all.length}`], ['long', `Long-term ${nLong}`], ['trade', `Trades ${all.length - nLong}`]] as const).map(([k, label]) => (
+            <button key={k} className={show === k ? 'button primary' : 'button'} onClick={() => setShow(k)} style={{ padding: '3px 10px', fontSize: 12 }}>{label}</button>
+          ))}
+        </span>
+      </div>
       {ranked.length === 0 ? (
         <div style={muted}>No candidates passed yet. Click Evaluate candidates.</div>
       ) : (
@@ -67,7 +78,7 @@ export default function CandidatesPanel() {
           <table style={table}>
             <thead>
               <tr>
-                {['Rank', 'Stock', 'Price', 'Target', 'Stop', 'Reward / risk', 'Volume', 'Trend', 'Earnings', 'Why'].map(h => <th key={h} style={th}>{h}</th>)}
+                {['Rank', 'Stock', 'Bucket', 'Price', 'Target', 'Stop', 'Reward / risk', 'Quality', 'Valuation', 'Trend', 'Earnings', 'Why'].map(h => <th key={h} style={th}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -77,14 +88,16 @@ export default function CandidatesPanel() {
                   <tr key={`${t}-${i}`}>
                     <td style={td}>{text(r.rank)}</td>
                     <TickerCell ticker={t} row={r} onOpen={() => setOpen(t)} />
+                    <td style={td}><BucketBadge bucket={r.bucket} />{r.horizon != null && <div style={{ ...muted, marginTop: 4 }}>{String(r.horizon)}</div>}{r.hype === true && <div style={{ ...muted, color: 'var(--bad)', marginTop: 4 }}>Hype: quick exit</div>}</td>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{usd(r.price)}</td>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{usd(r.target)}<div style={{ ...muted, color: 'var(--ok)' }}>{pct(r.target, r.price)}</div></td>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{usd(r.stop)}<div style={{ ...muted, color: 'var(--bad)' }}>{pct(r.stop, r.price)}</div></td>
                     <td style={td}>{text(r.rr)}</td>
-                    <td style={{ ...td, minWidth: 160 }}>{text(r.volume)}</td>
+                    <td style={{ ...td, minWidth: 170 }}>{r.quality == null ? <span style={muted}>{text(r.volume)}</span> : text(r.quality)}</td>
+                    <td style={{ ...td, minWidth: 150 }}>{r.valuation == null ? <span style={muted}>—</span> : text(r.valuation)}</td>
                     <td style={{ ...td, minWidth: 140 }}>{text(r.trend)}</td>
                     <td style={{ ...td, minWidth: 180 }}>{text(r.earnings)}</td>
-                    <td style={{ ...td, minWidth: 260 }}>{text(r.reason)}</td>
+                    <td style={{ ...td, minWidth: 260 }}>{text(r.reason)}{r.thesis != null && <div style={{ ...muted, marginTop: 4 }}>Thesis: {String(r.thesis)}</div>}</td>
                   </tr>
                 )
               })}
@@ -117,7 +130,7 @@ export default function CandidatesPanel() {
         </>
       )}
 
-      <div style={{ ...muted, marginTop: 8 }}>Click a ticker for its details and top news.</div>
+      <div style={{ ...muted, marginTop: 8 }}>Click a ticker for its long-range chart, key stats and top news. Long-term holds follow rules 26 to 32; trades follow the 2% stop rules.</div>
 
       {open && <TickerDetail ticker={open} rec={recOf(open)} data={data} onClose={() => setOpen(null)} />}
     </div>

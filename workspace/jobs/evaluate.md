@@ -12,7 +12,7 @@ Before you finish, call save_data with the name "candidates" and this shape:
 {
   "date": "YYYY-MM-DD",
   "summary": "one or two sentences in markdown",
-  "ranked": [{ "rank": 1, "ticker": "ABC", "name": "ABC Corp.", "price": 0, "target": 0, "stop": 0, "rr": 1.8, "volume": "1.7x avg", "trend": "+3.8% month", "earnings": "YYYY-MM-DD", "reason": "one line", "source": "site, time" }],
+  "ranked": [{ "rank": 1, "ticker": "ABC", "name": "ABC Corp.", "bucket": "long | trade", "horizon": "intraday | days | 6-24 months", "price": 0, "target": 0, "stop": 0, "rr": 1.8, "volume": "1.7x avg", "trend": "+3.8% month", "earnings": "YYYY-MM-DD", "quality": "4/5: ROIC 18%, F-score 7 (long only, else omit)", "valuation": "4/5: PEG 0.9, FCF yield 6% (long only, else omit)", "thesis": "long only: why it is missed / what breaks it", "hype": false, "reason": "one line", "source": "site, time" }],
   "dropped": [{ "ticker": "XYZ", "name": "XYZ Inc.", "rule": "the rule that removed it" }]
 }
 ```

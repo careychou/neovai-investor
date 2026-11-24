@@ -10,9 +10,21 @@ Open positions are the Buy calls the user accepted in `records/data/decisions.js
 
 The user also holds what is in `records/data/holdings.json` (read-only), bought outside the app with their own money. Count those tickers as held when you check overlap and concentration: do not recommend buying a stock the user already holds there without saying so, and count a fund's top holdings as exposure to those stocks. Do not make Sell or Change calls on them; the app's calls and budget cover only its own positions. If news or a rule makes one worth a look, say so in the summary and the user decides.
 
+## Buckets
+
+Every call carries its bucket: `long`, `trade` or `income` (user-preference "Three buckets"). Work out each bucket's cap (40%, 40% and 20% of the budget), what is in it now at entry prices, and what it would hold after today's calls. Never let a buy push a bucket over its cap. An open position keeps the bucket of the Buy that opened it; a position with no bucket is `trade`.
+
+Read `riskMetrics` in `records/data/review.json` when present. If beta is above 1.3, the max drawdown is worse than -10%, or the Sharpe ratio is below 0 over 20 days or more, make fewer and smaller trade buys and lean toward long quality and income. Say so in the summary.
+
 ## Open positions first
 
-For each position the user still holds, pick one:
+For each position the user still holds, pick one. Long positions follow rules 28 to 33 instead of the trade rules below:
+
+- Long sell all: the 8 to 10% stop or a weekly close under the 200-day average was hit, or earnings broke the thesis.
+- Long sell part: the gain reached +30% and no third has been sold yet. Sell a third and trail the rest 15% below the highest close.
+- Long change or hold: otherwise. Raise the stop as the 200-day average rises; add the second half when rule 29 allows. A long position does not need a call every day; give a Hold with the gain and whether the thesis still holds.
+
+Trade positions:
 
 - Sell all: the 2% hard stop was hit; the position is down 1% or more and the reason for buying has weakened; the gain is above 20% (or at `earningCapPct`, if that is lower); earnings come before the next session; or the daily loss limit was hit and the position is losing.
 - Sell part: the gain is +3% or more and no part has been sold yet. Sell half and move the stop to the entry price (rule 11 in `user-preference`).
@@ -30,14 +42,15 @@ For each position the user still holds, pick one:
 
 ## New buys
 
-- Take candidates in ranked order, best first, until a cap is reached or the candidates run out.
+- Take candidates in ranked order, best first, until a cap is reached or the candidates run out. Keep a balance: when both kinds pass, include at least one long idea and do not fill every slot with trades.
+- Long buys: size up to floor(1.5 × the per-stock cap / entry) shares, buying half now (rule 29). Stop 8 to 10% below the entry (rule 28). Target is the 12-month fair value from evaluation. Put the thesis and horizon on the call. Never buy a hype name as long.
 - Confidence: every New stock call must have a confidence of `high`, `medium` or `low` and a one-line reason for that level:
   - high: passes every threshold with room to spare, the trend and news back it up, and the risk/reward to the stop is clear.
   - medium: passes every threshold but one signal is mixed (for example thin margin over a threshold, mixed news, or a weak trend).
   - low: only just passes, or the data is partial or stale. Say what is missing.
   The reason says why this level was chosen, not why to buy. Keep it to one line.
 - Size: shares = floor(per-stock cap / entry), or floor(half the cap / entry) once the overall profit goal is reached. Both come from `goals.json` (`maxPerStockUsd`, `overallProfitPct`) as set out in `user-preference`. Keep at least one whole share; if one share costs more than the cap, skip the ticker.
-- Stop no more than 2% below the entry. The first target is at least +3%.
+- Trade buys: stop no more than 2% below the entry. The first target is at least +3%.
 - The total of open positions and new buys may not be more than the budget. If the budget can't fit another buy, stop adding buys and say so.
 
 ## Income sleeve
@@ -70,8 +83,9 @@ One block for each call:
 - Reason: one or two lines
 - Confidence (New stocks: required): high, medium or low, with a one-line reason for the level
 - Price source and time
+- Bucket (long, trade or income), and for long calls the horizon and one-line thesis
 
-End with one line: the cash left after these calls.
+End with one line: the cash left after these calls, and each bucket's use against its cap.
 
 ## Save
 

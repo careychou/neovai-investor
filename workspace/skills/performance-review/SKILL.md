@@ -92,6 +92,21 @@ Read the record files and list each recommendation with its date, action, ticker
 
 Score accepted calls as the user's real results, and declined calls separately as what was skipped.
 
+## 6b. Risk metrics against the S&P 500
+
+Measure the account like a fund manager would, so the next recommendation can lean safer or bolder.
+
+1. Fetch daily closes from the Yahoo chart API (`range=6mo` or `1y`, `interval=1d`) for SPY, `^IRX` and every ticker in the account (app positions and holdings added by hand).
+2. Build the daily account value from the first accepted decision: cash + app positions × close. Leave out holdings added by hand from returns, as the Performance screen does.
+3. From daily returns of the account (p) and SPY (b), with the risk-free rate r = ^IRX / 100 / 252 per day:
+   - beta = cov(p, b) / var(b); alpha (yearly, %) = (mean(p − r) − beta × mean(b − r)) × 252 × 100
+   - Sharpe = mean(p − r) / stdev(p) × √252; Sortino uses the downside deviation instead of stdev
+   - max drawdown = the worst fall from a running peak; volatility = stdev(p) × √252
+   - vs S&P 500 = the account's return minus SPY's over the same days
+4. With fewer than 20 trading days, still compute them but say they are rough. With fewer than 5, use null.
+5. Read them plainly: beta above 1.3 means the account swings more than the market; a drawdown worse than -10% or a Sharpe below 0 means the trade bucket is taking too much risk for retirement money. Say so in the note and in suggested changes.
+6. Split results by bucket when there are long positions: return and win rate for `long` and for `trade`.
+
 ## 7. What to learn
 
 - What worked: patterns shared by the wins (sector, setup, time of day, market mood).

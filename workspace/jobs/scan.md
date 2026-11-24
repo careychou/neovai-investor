@@ -15,7 +15,7 @@ Before you finish, call save_data with the name "market" and this shape, so the 
   "news": [{ "headline": "one line", "why": "why it moves the market", "source": "site, time", "tickers": ["every ticker the story names or is mainly about, e.g. NVDA; [] if none"] }],
   "alerts": [{ "level": "info | warn | bad | good", "text": "one line" }],
   "sectors": [{ "sector": "Energy", "change": "+1.2%", "note": "leading | lagging, and why" }],
-  "watch": [{ "ticker": "XYZ", "name": "company or fund name", "reason": "why it stood out" }],
+  "watch": [{ "ticker": "XYZ", "name": "company or fund name", "bucket": "long | trade", "reason": "why it stood out", "thesis": "long only: why the market is missing it and what would prove it wrong", "hype": false }],
   "rates": {
     "tbillYieldPct": 4.12,
     "tbill3moAgoPct": 3.75,
@@ -36,4 +36,4 @@ Fill "rates" on every run from the Yahoo chart API: `^IRX` (13-week T-bill; the 
 
 Tag every "news" item with the tickers it is about, so the Recommendations screen can show each stock's top news when its ticker is clicked. A stock may have several holdingsNews items; list the most important first.
 
-"watch" should hold at least 20 tickers (see the market-scan skill). Use "no data" for anything you could not fetch. Finish with a short report: the mood, any holdings with bad news, and the watch list.
+"watch" should hold at least 20 tickers (see the market-scan skill): at least 8 `long` hidden-jewel ideas and at least 10 `trade` names. Set "hype" to true by the hype test in the skill; a hype name is always `trade`. Use "no data" for anything you could not fetch. Finish with a short report: the mood, any holdings with bad news, and the watch list.

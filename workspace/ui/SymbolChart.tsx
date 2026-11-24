@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useApp, useFetch, usePanelState, Chart } from '@neovai/panel'
+import { Info } from 'lucide-react'
+import { TickerDetail } from './RecommendationsPanel'
+import { withAverages } from './KeyStats'
 
-type RangeKey = '1D' | '5D' | '1M' | '6M' | '1Y'
+type RangeKey = '1D' | '5D' | '1M' | '6M' | '1Y' | '2Y' | '5Y' | '10Y' | 'Max'
 
 const RANGES: Record<RangeKey, { range: string; interval: string }> = {
   '1D': { range: '1d', interval: '5m' },
@@ -9,6 +12,19 @@ const RANGES: Record<RangeKey, { range: string; interval: string }> = {
   '1M': { range: '1mo', interval: '1d' },
   '6M': { range: '6mo', interval: '1d' },
   '1Y': { range: '1y', interval: '1d' },
+  '2Y': { range: '2y', interval: '1d' },
+  '5Y': { range: '5y', interval: '1wk' },
+  '10Y': { range: '10y', interval: '1wk' },
+  'Max': { range: 'max', interval: '1mo' },
+}
+
+/** Moving averages drawn on the long ranges: about 50 and 200 trading days in each bar size. */
+const AVERAGES: Partial<Record<RangeKey, { fast: number; slow: number; label: string }>> = {
+  '1Y': { fast: 50, slow: 200, label: '50-day and 200-day' },
+  '2Y': { fast: 50, slow: 200, label: '50-day and 200-day' },
+  '5Y': { fast: 10, slow: 40, label: '10-week and 40-week' },
+  '10Y': { fast: 10, slow: 40, label: '10-week and 40-week' },
+  'Max': { fast: 3, slow: 10, label: '3-month and 10-month' },
 }
 
 const GREEN = 'var(--ok)'
@@ -44,7 +60,8 @@ const MARKET_SYMBOL: Record<string, string> = { VIX: '^VIX' }
 const clean = (s: string) => s.trim().toUpperCase().replace(/[^A-Z0-9.\-^=]/g, '')
 
 export default function SymbolChart() {
-  const { get } = useApp()
+  const { get, data: appData } = useApp()
+  const [detail, setDetail] = useState(false)
   const decisions = (get('decisions.items') as any[]) ?? []
   const manual = (get('holdings.items') as any[]) ?? []
   const watchRaw = get('market.watch') as any[]
@@ -105,8 +122,13 @@ export default function SymbolChart() {
     const base: number | null =
       typeof meta.chartPreviousClose === 'number' ? meta.chartPreviousClose : rows.length ? rows[0].open : null
     const changePct = last != null && base ? ((last - base) / base) * 100 : null
-    return { rows, last, changePct, currency: meta.currency ?? 'USD' }
+    const first = rows[0]?.close, end = rows[rows.length - 1]?.close
+    const years = rows.length > 1 ? (Date.parse(rows[rows.length - 1].date) - Date.parse(rows[0].date)) / (365.25 * 86400_000) : 0
+    const cagr = first && end && years >= 1.5 ? (Math.pow(end / first, 1 / years) - 1) * 100 : null
+    return { rows, last, changePct, cagr, currency: meta.currency ?? 'USD' }
   }, [data, intraday])
+  const avg = AVERAGES[rangeKey]
+  const lineRows = useMemo(() => (parsed && avg ? withAverages(parsed.rows, avg.fast, avg.slow) : []), [parsed, avg])
 
   const up = parsed?.changePct != null ? parsed.changePct >= 0 : null
   const color = up == null ? 'var(--muted)' : up ? GREEN : RED
@@ -161,10 +183,14 @@ export default function SymbolChart() {
             <span style={{ fontSize: 14, fontWeight: 600, color }}>
               {up ? '▲' : '▼'} {up ? '+' : '−'}{Math.abs(parsed.changePct).toFixed(2)}%
               <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 4 }}>
-                {rangeKey === '1D' ? 'today' : rangeKey}
+                {rangeKey === '1D' ? 'today' : rangeKey}{parsed.cagr != null ? ` · ${parsed.cagr >= 0 ? '+' : ''}${parsed.cagr.toFixed(1)}%/yr` : ''}
               </span>
             </span>
           )}
+          <button className="button" onClick={() => setDetail(true)} title={`Key stats, long-range chart and news for ${ticker}`}
+            style={{ padding: '3px 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <Info size={13} /> Details
+          </button>
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
@@ -191,13 +217,16 @@ export default function SymbolChart() {
         <div style={{ color: 'var(--muted)', padding: '40px 0', textAlign: 'center' }}>No price bars for {ticker} in this range (no data).</div>
       ) : rangeKey === '1D' ? (
         <Chart kind="line" rows={parsed.rows} x="date" y="close" height={300} />
+      ) : avg ? (
+        <Chart kind="line" rows={lineRows} x="date" y={['close', 'fastAvg', 'slowAvg']} height={340} />
       ) : (
         <Chart kind="candlestick" rows={parsed.rows} x="date" volume height={340} />
       )}
 
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-        Live from Yahoo Finance · refreshes every 60 seconds{loading ? ' · updating…' : ''}
+        Live from Yahoo Finance · refreshes every 60 seconds{avg ? ` · lines: close, ${avg.label} averages` : ''}{loading ? ' · updating…' : ''}
       </div>
+      {detail && <TickerDetail ticker={ticker} rec={null} data={(appData ?? {}) as Record<string, unknown>} onClose={() => setDetail(false)} />}
     </div>
   )
 }

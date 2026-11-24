@@ -26,6 +26,10 @@
     },
     {
       "type": "panel",
+      "file": "ui/PerformanceTrend.tsx"
+    },
+    {
+      "type": "panel",
       "file": "ui/IncomeSleeve.tsx"
     },
     {

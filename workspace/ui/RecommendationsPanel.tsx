@@ -6,6 +6,7 @@ import { RefreshCw, Square, CheckCircle2, AlertCircle, Loader2, X, ChevronRight 
 import { formatDistanceToNow } from 'date-fns'
 import { useCompanyName, companyNews } from './lib/companyNews'
 import { isSleeve, fmtUsd, fmtPct } from './lib/tbill'
+import KeyStats, { PriceHistory } from './KeyStats'
 
 type Group = 'Buy' | 'Sell' | 'Change' | 'Income'
 const INCOME_TONE = '#c9a227'
@@ -37,6 +38,7 @@ const muted: CSSProperties = { color: 'var(--muted)', fontSize: 12 }
 type Rec = {
   ticker?: string; action?: string; confidence?: string; confidenceReason?: string; reason?: string
   entry?: unknown; target?: unknown; stop?: unknown; shares?: unknown; date?: string
+  bucket?: string; horizon?: string; thesis?: string
 }
 type AnyObj = Record<string, unknown>
 
@@ -92,7 +94,17 @@ function Field({ label, value, tone }: { label: string; value: unknown; tone?: s
   )
 }
 
+/** "long" → Long-term hold, "trade" → Trade, "income" → Income. */
+export function BucketBadge({ bucket }: { bucket?: unknown }) {
+  const b = String(bucket ?? '').toLowerCase()
+  if (!b) return null
+  const [label, color] = b.startsWith('long') ? ['Long-term hold', '#3b82f6'] : b.startsWith('inc') ? ['Income', INCOME_TONE] : ['Trade', '#e0a030']
+  return <span title={b.startsWith('long') ? 'Long-term bucket: quality company held for months or years (rules 26 to 32).' : b.startsWith('inc') ? 'Income sleeve: T-bill funds.' : 'Trading bucket: quick in and out (rules 4 to 17).'}
+    style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 999, color, border: `1px solid ${color}`, whiteSpace: 'nowrap' }}>{label}</span>
+}
+
 export function TickerDetail({ ticker, rec, data, onClose }: { ticker: string; rec: Rec | null; data: AnyObj; onClose: () => void }) {
+  const watch = asObjs(resolveData(data, 'market.watch')).find(o => sameTicker(o, ticker))
   const cand = asObjs(resolveData(data, 'candidates.ranked')).find(o => sameTicker(o, ticker))
   const dropped = asObjs(resolveData(data, 'candidates.dropped')).find(o => sameTicker(o, ticker))
   const held = asObjs(resolveData(data, 'review.holdings')).find(o => sameTicker(o, ticker))
@@ -110,7 +122,7 @@ export function TickerDetail({ ticker, rec, data, onClose }: { ticker: string; r
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--panel)', color: 'var(--text)', border: '1px solid var(--line)', borderRadius: 12, padding: 18, width: 'min(720px, 100%)', maxHeight: '85vh', overflowY: 'auto' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--panel)', color: 'var(--text)', border: '1px solid var(--line)', borderRadius: 12, padding: 18, width: 'min(860px, 100%)', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap' }}>
@@ -118,6 +130,7 @@ export function TickerDetail({ ticker, rec, data, onClose }: { ticker: string; r
               {name && <span style={{ fontSize: 15, fontWeight: 600 }}>{name}</span>}
             </div>
             {rec?.action && <div style={muted}>Today's call: {rec.action}{rec.confidence ? ` · ${rec.confidence} confidence` : ''}</div>}
+            <div style={{ display: 'flex', gap: 6, marginTop: 4 }}><BucketBadge bucket={rec?.bucket ?? cand?.bucket ?? watch?.bucket} />{(rec?.horizon ?? cand?.horizon) != null && <span style={muted}>{String(rec?.horizon ?? cand?.horizon)}</span>}</div>
           </div>
           <button className="button" onClick={onClose} aria-label="Close" style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 8px' }}><X size={14} /></button>
         </div>
@@ -132,6 +145,7 @@ export function TickerDetail({ ticker, rec, data, onClose }: { ticker: string; r
               <Field label="Shares" value={num(rec.shares) ?? (num(held?.shares) != null ? `${held?.shares} held` : null)} />
             </div>
             {rec.reason && <div style={{ marginTop: 8, fontSize: 13 }}>{rec.reason}</div>}
+            {rec.thesis && <div style={{ marginTop: 6, fontSize: 13 }}><span style={muted}>Thesis: </span>{rec.thesis}</div>}
             {rec.confidenceReason && <div style={{ ...muted, marginTop: 4 }}>Confidence: {rec.confidenceReason}</div>}
           </div>
         )}
@@ -167,9 +181,20 @@ export function TickerDetail({ ticker, rec, data, onClose }: { ticker: string; r
               {cand.trend != null && <div><span style={muted}>Trend: </span>{String(cand.trend)}</div>}
               {cand.volume != null && <div><span style={muted}>Volume: </span>{String(cand.volume)}</div>}
               {cand.earnings != null && <div><span style={muted}>Earnings: </span>{String(cand.earnings)}</div>}
+              {cand.quality != null && <div><span style={muted}>Quality: </span>{String(cand.quality)}</div>}
+              {cand.valuation != null && <div><span style={muted}>Valuation: </span>{String(cand.valuation)}</div>}
+              {cand.thesis != null && <div><span style={muted}>Thesis: </span>{String(cand.thesis)}</div>}
+              {cand.hype != null && cand.hype !== false && <div><span style={{ color: 'var(--bad)' }}>Hype: </span>{String(cand.hype === true ? 'trade only, quick exit' : cand.hype)}</div>}
               {cand.reason != null && <div><span style={muted}>Why: </span>{String(cand.reason)}</div>}
             </div>
             {cand.source != null && <div style={{ ...muted, marginTop: 4 }}>{String(cand.source)}</div>}
+          </div>
+        )}
+        {!cand && !dropped && watch && (
+          <div style={box}>
+            <div style={h}>From the market scan</div>
+            <div style={{ fontSize: 13, marginTop: 4 }}>{String(watch.reason ?? '')}</div>
+            {watch.thesis != null && <div style={{ fontSize: 13, marginTop: 4 }}><span style={muted}>Thesis: </span>{String(watch.thesis)}</div>}
           </div>
         )}
         {!cand && dropped && (
@@ -178,6 +203,9 @@ export function TickerDetail({ ticker, rec, data, onClose }: { ticker: string; r
             <div style={{ fontSize: 13, marginTop: 4 }}><span style={{ color: 'var(--bad)' }}>Dropped: </span>{String(dropped.rule ?? '')}</div>
           </div>
         )}
+
+        <PriceHistory ticker={ticker} />
+        <KeyStats ticker={ticker} price={num(held?.price) ?? num(cand?.price) ?? num(rec?.entry)} />
 
         <div style={box}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -232,6 +260,34 @@ export function TickerDetail({ ticker, rec, data, onClose }: { ticker: string; r
         )}
 
       </div>
+    </div>
+  )
+}
+
+const BUCKETS: [string, string, string][] = [['long', 'Long-term holds', '#3b82f6'], ['trade', 'Trades', '#e0a030'], ['income', 'Income', INCOME_TONE]]
+
+/** How much of each bucket's share of the budget is used, from picks.buckets. */
+function BucketBar({ buckets, note }: { buckets: unknown; note: unknown }) {
+  const b = (buckets && typeof buckets === 'object' ? buckets : null) as Record<string, { capUsd?: unknown; usedUsd?: unknown; afterUsd?: unknown }> | null
+  if (!b && !note) return null
+  return (
+    <div style={{ marginTop: 8 }}>
+      {b && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+          {BUCKETS.map(([k, label, color]) => {
+            const x = b[k] ?? {}
+            const cap = num(x.capUsd), used = num(x.afterUsd) ?? num(x.usedUsd)
+            const w = cap && used != null ? Math.min(100, (used / cap) * 100) : 0
+            return (
+              <div key={k} style={{ fontSize: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><b style={{ color }}>{label}</b><span style={muted}>{used == null ? 'no data' : usd(used)} of {cap == null ? 'no data' : usd(cap)}</span></div>
+                <div style={{ height: 6, borderRadius: 3, background: 'rgba(127,127,127,0.2)', marginTop: 4, overflow: 'hidden' }}><div style={{ width: `${w}%`, height: '100%', background: color }} /></div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {typeof note === 'string' && note && <div style={{ ...muted, marginTop: 6 }}>{note}</div>}
     </div>
   )
 }
@@ -308,6 +364,7 @@ export default function RecommendationsPanel() {
             {t || '?'}<ChevronRight size={14} color="var(--muted)" />
           </button>
           <span style={{ background: pill, color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>{group === 'Income' ? `Income · ${rec.action ?? 'Buy'}` : rec.action ?? group}</span>
+          {group !== 'Income' && <BucketBadge bucket={rec.bucket} />}
           <span style={{ ...muted, marginLeft: 'auto' }}>{rec.confidence ?? ''}</span>
         </div>
         <CompanyName ticker={t} rec={rec as Record<string, unknown>} style={{ fontSize: 13, marginTop: -4 }} />
@@ -427,6 +484,7 @@ export default function RecommendationsPanel() {
           <span><b>{income.length}</b> income</span>
           {typeof picks.cash === 'string' && <span style={{ color: 'var(--muted)' }}>Cash: {picks.cash}</span>}
         </div>
+        <BucketBar buckets={picks.buckets} note={picks.bucketNote} />
         {typeof picks.incomeNote === 'string' && picks.incomeNote && (
           <div style={{ fontSize: 13, marginTop: 6, borderLeft: `3px solid ${INCOME_TONE}`, paddingLeft: 8 }}><span style={muted}>Income: </span>{picks.incomeNote}</div>
         )}
