@@ -26,6 +26,10 @@
     },
     {
       "type": "panel",
+      "file": "ui/ShowTheMath.tsx"
+    },
+    {
+      "type": "panel",
       "file": "ui/PerformanceTrend.tsx"
     },
     {
