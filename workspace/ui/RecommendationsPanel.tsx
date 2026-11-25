@@ -8,6 +8,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { useCompanyName, companyNews } from './lib/companyNews'
 import { isSleeve, fmtUsd, fmtPct } from './lib/tbill'
 import KeyStats, { PriceHistory } from './KeyStats'
+import CompanyAbout from './CompanyAbout'
 
 type Group = 'Buy' | 'Sell' | 'Change' | 'Income'
 const INCOME_TONE = '#c9a227'
@@ -104,7 +105,9 @@ export function BucketBadge({ bucket }: { bucket?: unknown }) {
     style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 999, color, border: `1px solid ${color}`, whiteSpace: 'nowrap' }}>{label}</span>
 }
 
-export function TickerDetail({ ticker, rec, data, onClose }: { ticker: string; rec: Rec | null; data: AnyObj; onClose: () => void }) {
+export function TickerDetail({ ticker: start, rec: startRec, data, onClose }: { ticker: string; rec: Rec | null; data: AnyObj; onClose: () => void }) {
+  const [ticker, setTicker] = useState(start)
+  const rec = ticker === start ? startRec : null
   const watch = asObjs(resolveData(data, 'market.watch')).find(o => sameTicker(o, ticker))
   const cand = asObjs(resolveData(data, 'candidates.ranked')).find(o => sameTicker(o, ticker))
   const dropped = asObjs(resolveData(data, 'candidates.dropped')).find(o => sameTicker(o, ticker))
@@ -135,6 +138,10 @@ export function TickerDetail({ ticker, rec, data, onClose }: { ticker: string; r
           </div>
           <button className="button" onClick={onClose} aria-label="Close" style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 8px' }}><X size={14} /></button>
         </div>
+
+        {ticker !== start && <button className="button" onClick={() => setTicker(start)} style={{ marginTop: 8, fontSize: 12, padding: '3px 10px' }}>← Back to {start}</button>}
+
+        <CompanyAbout ticker={ticker} row={cand ?? watch ?? null} onOpenTicker={setTicker} />
 
         {rec && (
           <div style={box}>

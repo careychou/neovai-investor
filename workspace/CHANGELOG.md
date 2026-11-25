@@ -8,6 +8,17 @@ Format: date · area · short title, then what changed, why, files, and the comm
 
 ---
 
+## 2026-11-25 · ui, job · Candidates: what each company does and its competitors
+- **What:** The stock detail window (opened by clicking a ticker on Candidates, Recommendations or Today) has a new
+  "About the company" box at the top: a plain-English summary (saved by the evaluation), the full company description,
+  industry, sector, founded, employees, CEO and website (read live from stockanalysis.com), a competitor list with how each
+  competes (saved by the evaluation), and listed companies in the same industry closest in size (live). Clicking any of those
+  tickers opens it in the same window, with a Back button. The Candidates table shows each ranked stock's industry and a short
+  "what they do" line under its name. The evaluate job now saves `business`, `industry` and `competitors` for each ranked stock.
+- **Why:** The user couldn't tell from the names what the companies do or who they compete with.
+- **Files:** ui/lib/companyProfile.ts (new), ui/CompanyAbout.tsx (new), ui/RecommendationsPanel.tsx, ui/CandidatesPanel.tsx, jobs/evaluate.md, CHANGELOG.md
+- **Commit:** _not yet published_
+
 ## 2026-11-25 · ui, skill, job · Fix: Market Scan box stuck on the Nov 22 scan
 - **What:** The Market Scan box on the Today screen now reads the latest saved scan (what "Run market scan" saves), so it updates on
   every run: mood, index and risk metrics, alerts (bad/warn/info shown as high/medium/low), news likely to move the market, and
@@ -16,7 +27,7 @@ Format: date · area · short title, then what changed, why, files, and the comm
 - **Why:** The box read a fixed snapshot built into the screen. The skill told the runtime agent to overwrite that file after each scan,
   but that agent may write only inside records/, so the box never changed after Nov 22 even though scans ran.
 - **Files:** ui/Today.tsx, ui/MarketScanPanel.tsx, skills/market-scan/SKILL.md, jobs/scan.md, CHANGELOG.md
-- **Commit:** _not yet published_
+- **Commit:** 1cc42ba
 
 ## 2026-11-25 · ui · Fix: could not save an edited holding
 - **What:** The Edit form for a holding you added was drawn inside the wide Positions table, so its Save changes and Cancel

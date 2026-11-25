@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useApp, usePanelState, resolveData } from '@neovai/panel'
 import { ChevronRight } from 'lucide-react'
 import { TickerDetail, CompanyName, BucketBadge } from './RecommendationsPanel'
+import { CompanyLine } from './CompanyAbout'
 
 type AnyObj = Record<string, unknown>
 
@@ -29,9 +30,9 @@ const table: CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSi
 const th: CSSProperties = { textAlign: 'left', padding: '10px 12px', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--line)', whiteSpace: 'nowrap', background: 'rgba(127,127,127,0.06)' }
 const td: CSSProperties = { padding: '10px 12px', borderBottom: '1px solid var(--line)', verticalAlign: 'top' }
 
-function TickerCell({ ticker, row, onOpen }: { ticker: string; row: AnyObj; onOpen: () => void }) {
+function TickerCell({ ticker, row, onOpen, about = false }: { ticker: string; row: AnyObj; onOpen: () => void; about?: boolean }) {
   return (
-    <td style={{ ...td, minWidth: 150, maxWidth: 220 }}>
+    <td style={{ ...td, minWidth: about ? 220 : 150, maxWidth: about ? 280 : 220 }}>
       <button
         onClick={onOpen}
         title={`Show ${ticker} details and top news`}
@@ -42,6 +43,7 @@ function TickerCell({ ticker, row, onOpen }: { ticker: string; row: AnyObj; onOp
       <div style={{ display: 'flex', marginTop: 2 }}>
         <CompanyName ticker={ticker} rec={row} style={{ fontSize: 12 }} />
       </div>
+      {about && <CompanyLine ticker={ticker} row={row} />}
     </td>
   )
 }
@@ -88,7 +90,7 @@ export default function CandidatesPanel() {
                 return (
                   <tr key={`${t}-${i}`}>
                     <td style={td}>{text(r.rank)}</td>
-                    <TickerCell ticker={t} row={r} onOpen={() => setOpen(t)} />
+                    <TickerCell ticker={t} row={r} onOpen={() => setOpen(t)} about />
                     <td style={td}><BucketBadge bucket={r.bucket} />{r.horizon != null && <div style={{ ...muted, marginTop: 4 }}>{String(r.horizon)}</div>}{r.hype === true && <div style={{ ...muted, color: 'var(--bad)', marginTop: 4 }}>Hype: quick exit</div>}</td>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{usd(r.price)}</td>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{usd(r.target)}<div style={{ ...muted, color: 'var(--ok)' }}>{pct(r.target, r.price)}</div></td>
@@ -131,7 +133,7 @@ export default function CandidatesPanel() {
         </>
       )}
 
-      <div style={{ ...muted, marginTop: 8 }}>Click a ticker for its long-range chart, key stats and top news. Long-term holds follow rules 26 to 32; trades follow the 2% stop rules.</div>
+      <div style={{ ...muted, marginTop: 8 }}>Click a ticker for what the company does, its competitors, long-range chart, key stats and top news. Long-term holds follow rules 26 to 32; trades follow the 2% stop rules.</div>
 
       {open && <TickerDetail ticker={open} rec={recOf(open)} data={data} onClose={() => setOpen(null)} />}
     </div>
