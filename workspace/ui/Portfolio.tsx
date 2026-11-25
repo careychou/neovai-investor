@@ -82,6 +82,18 @@ function Section({ title, right, action, children }: { title: string; right?: Re
   )
 }
 
+function CardRow({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>
+        <span style={{ fontSize: 13, fontWeight: 700 }}>{title}</span>
+        {note && <span style={{ fontSize: 12, ...MUTED }}>{note}</span>}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(140px, 1fr))', gap: 10, overflowX: 'auto' }}>{children}</div>
+    </div>
+  )
+}
+
 const Badge = ({ children, title }: { children: ReactNode; title?: string }) => (
   <span title={title} style={{ display: 'inline-block', marginLeft: 6, padding: '1px 7px', borderRadius: 999, fontSize: 10.5, fontWeight: 600, verticalAlign: 'middle', color: BLUE, background: `${BLUE}1f` }}>{children}</span>
 )
@@ -186,56 +198,51 @@ export default function Portfolio({ goals, data, saveHoldings }: { goals: Goals 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
         <div>
-          <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6, ...MUTED }}>Account value</div>
+          <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6, ...MUTED }}>Account value{hasManual ? ' · app picks + my funds' : ''}</div>
           <div style={{ fontSize: 36, fontWeight: 800, fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>{usd(accountValue)}</div>
           <div style={{ fontSize: 14, marginTop: 4 }}>
             <span style={{ color: tone(today), fontWeight: 600 }}>{today == null ? 'Today: no data' : `${usd(today, true)} (${pct(todayPct)})`}</span>
-            <span style={MUTED}> today · </span>
-            <span style={{ color: tone(allTimeUsd), fontWeight: 600 }}>{usd(allTimeUsd, true)} ({pct(allTimePct)})</span>
-            <span style={MUTED}> all time · </span>
-            <span style={{ color: tone(allDividends), fontWeight: 600 }}>{usd(allDividends, true)}</span>
-            <span style={MUTED}> dividends{allPending > 0 ? ` (${usd(allPending)} pending)` : ''}</span>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap', marginLeft: 'auto' }}>
-        <div title="Dividends and interest actually paid, on the app's calls and your own funds"
-          style={{ border: BORDER, borderRadius: 12, padding: '10px 16px', background: `${GREEN}10`, minWidth: 200 }}>
-          <div style={{ fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', ...MUTED }}>Total dividends</div>
-          <div style={{ fontSize: 26, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: tone(allDividends) }}>{usd(allDividends, true)}</div>
-          <div style={{ fontSize: 12, ...MUTED }}>
-            {hasManual ? `App ${usd(income)} · your funds ${usd(manualPaid)}` : 'Paid to you'}
-            {allPending > 0 && <div>{usd(allPending)} pending, not counted yet</div>}
+            <span style={MUTED}> today</span>
           </div>
         </div>
         <div style={{ textAlign: 'right', fontSize: 12, ...MUTED }}>
           {hasAccount ? `Prices as of ${reviewedAt}` : 'No account data yet. Click “Update account” to compute it.'}
           {newSince > 0 && <div style={{ color: '#e0a030', opacity: 1 }}>{newSince} accepted call{newSince > 1 ? 's' : ''} since the last update. Update to include {newSince > 1 ? 'them' : 'it'}.</div>}
         </div>
-        </div>
       </div>
 
-      {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 10 }}>
-        <Card label="Total value" value={usd(accountValue)} sub={hasManual ? `App ${usd(totalValue)} · yours ${usd(mt.marketValue)}` : `Starting budget ${usd(budget)}`} />
-        <Card label="Cash" value={usd(cash)} sub={`${((cash / Math.max(accountValue, 1)) * 100).toFixed(1)}% of account`} />
-        <Card label="Invested" value={usd(accountInvested)} sub={`Market value ${usd(accountMarket)}`} />
-        <Card label="Realized profit" value={usd(realized, true)} color={tone(realized)} sub={`${closedCount} closed trade${closedCount === 1 ? '' : 's'}`} />
-        <Card label="Realized + dividends" value={usd(realized + allDividends, true)} color={tone(realized + allDividends)}
-          sub={`Trades ${usd(realized, true)} + dividends ${usd(allDividends, true)}${hasManual ? ' (incl. your funds)' : ''}`} />
-        <Card label="Unrealized profit" value={usd(accountUnrealized, true)} color={tone(accountUnrealized)} sub={`${positions} open position${positions === 1 ? '' : 's'}`} />
-        <Card label="Dividends & interest" value={usd(income, true)} color={tone(income)}
-          sub={pendingIncome > 0 ? `Paid only · ${usd(pendingIncome)} pending, not counted` : 'Paid to you only'} />
-        <Card label={`Total profit vs ${goalPct}% goal`} value={pct(totalPct)} color={tone(totalPct)}
-          sub={`${usd(totalUsd, true)} (price ${usd(realized + unrealized, true)} + income ${usd(income, true)}) of ${usd(num(a.goalUsd) ?? (budget * goalPct) / 100)} goal${hasManual ? ' · app calls only' : ''}`}>
+      {/* Row 1: the app's picks */}
+      <CardRow title="App picks" note={`${usd(budget)} budget · the calls you accepted`}>
+        <Card label="Value" value={usd(totalValue)} sub={appToday == null ? `Started at ${usd(budget)}` : `Today ${usd(appToday, true)}`} />
+        <Card label="Cash" value={usd(cash)} sub={`${((cash / Math.max(totalValue, 1)) * 100).toFixed(1)}% of app value`} />
+        <Card label="Invested" value={usd(invested)} sub={`Worth ${usd(marketValue)} now`} />
+        <Card label="Unrealized" value={usd(unrealized, true)} color={tone(unrealized)} sub={`${holdings.length + (Array.isArray(review.income?.holdings) ? review.income.holdings.length : 0)} still held`} />
+        <Card label="Realized + dividends" value={usd(realized + income, true)} color={tone(realized + income)}
+          sub={`Trades ${usd(realized, true)} + div ${usd(income, true)} · ${closedCount} sold${winRate == null ? '' : `, ${winRate.toFixed(0)}% won`}`} />
+        <Card label="Dividends + interest" value={usd(income, true)} color={tone(income)} sub={pendingIncome > 0 ? `${usd(pendingIncome)} pending` : 'Paid to you'} />
+        <Card label={`Total profit · ${goalPct}% goal`} value={usd(totalUsd, true)} color={tone(totalUsd)} sub={`${pct(totalPct)} of ${usd(num(a.goalUsd) ?? (budget * goalPct) / 100)} goal`}>
           <div style={{ height: 6, borderRadius: 3, background: 'rgba(127,127,127,0.2)', marginTop: 8, overflow: 'hidden' }}>
             <div style={{ width: `${Math.max(0, Math.min(100, goalProgress))}%`, height: '100%', background: goalProgress >= 100 ? GREEN : totalPct < 0 ? RED : BLUE }} />
           </div>
         </Card>
-        <Card label="Win rate" value={winRate == null ? 'n/a' : `${winRate.toFixed(0)}%`} sub={closedCount ? `${wins} of ${closedCount} trades won` : 'No closed trades yet'} />
-        <Card label="Today's change" value={today == null ? 'no data' : usd(today, true)} color={tone(today)} sub={todayPct == null ? undefined : pct(todayPct)} />
-        {hasManual && <Card label="Your funds: dividends paid" value={usd(manualPaid, true)} color={tone(manualPaid)}
-          sub={needsDate.length ? `${needsDate.length} holding${needsDate.length > 1 ? 's' : ''} need a buy date to count` : `Est. ${usd(mt.estAnnualIncome)} a year`} />}
-      </div>
+      </CardRow>
+
+      {/* Row 2: my own funds */}
+      {hasManual ? (
+        <CardRow title="My funds" note="Added by you · extra money, outside the app's budget and goal">
+          <Card label="Value" value={usd(mt.marketValue)} sub={`Today ${usd(mt.dayChangeUsd, true)}`} />
+          <Card label="Cost" value={usd(mt.costBasis)} sub={`${mt.count} holding${mt.count === 1 ? '' : 's'}`} />
+          <Card label="Unrealized" value={usd(mt.unrealizedUsd, true)} color={tone(mt.unrealizedUsd)} sub={mt.costBasis ? pct((mt.unrealizedUsd / mt.costBasis) * 100) : undefined} />
+          <Card label="Realized + dividends" value={usd(manualPaid, true)} color={tone(manualPaid)} sub="No sales · all from dividends" />
+          <Card label="Dividends + interest" value={usd(manualPaid, true)} color={tone(manualPaid)}
+            sub={needsDate.length ? `${needsDate.length} need a buy date` : manualPending > 0 ? `${usd(manualPending)} pending` : 'Paid to you'} />
+          <Card label="Est. income / year" value={usd(mt.estAnnualIncome)} sub={mt.marketValue ? `${((mt.estAnnualIncome / mt.marketValue) * 100).toFixed(1)}% yield` : undefined} />
+          <Card label="Total return" value={usd(mt.unrealizedUsd + manualPaid, true)} color={tone(mt.unrealizedUsd + manualPaid)}
+            sub={mt.costBasis ? `${pct(((mt.unrealizedUsd + manualPaid) / mt.costBasis) * 100)} · price + dividends` : 'price + dividends'} />
+        </CardRow>
+      ) : (
+        <div style={{ fontSize: 12, margin: '4px 0 0', ...MUTED }}>Bought something outside the app? Use “Add holding” below to track it in a second row.</div>
+      )}
 
       {/* Holdings */}
       <Section title="Positions"

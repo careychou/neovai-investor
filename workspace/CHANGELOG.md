@@ -8,6 +8,15 @@ Format: date · area · short title, then what changed, why, files, and the comm
 
 ---
 
+## 2026-11-25 · ui · Performance: two clear rows, "App picks" and "My funds"
+- **What:** Replaced the mixed summary cards and the separate Total dividends box with two labelled rows of seven cards.
+  App picks: Value, Cash, Invested, Unrealized, Realized + dividends (with trades sold and win rate), Dividends + interest, Total profit vs goal (with progress bar).
+  My funds: Value, Cost, Unrealized, Realized + dividends, Dividends + interest, Est. income / year (with yield), Total return (price + dividends).
+  The header keeps the combined account value and today's change. No numbers mix the two groups except that header total.
+- **Why:** The user found the cards confusing because app-pick and own-fund numbers were blended across many boxes.
+- **Files:** ui/Portfolio.tsx, CHANGELOG.md
+- **Commit:** _not yet published_
+
 ## 2026-11-25 · ui, skill · Performance: total dividends at the top and "Realized + dividends" card
 - **What:** The Performance header shows a "Total dividends" box (dividends and interest actually paid on the app's calls plus
   your own funds, split into the two, with any pending amount noted) and adds "+$X dividends" to the today / all-time line.
@@ -16,7 +25,7 @@ Format: date · area · short title, then what changed, why, files, and the comm
   user's ETFs, so every payout was left "pending" and all dividend totals showed $0).
 - **Why:** The user wanted total dividends visible at the top and realized profit shown with dividends.
 - **Files:** ui/Portfolio.tsx, skills/performance-review/SKILL.md, CHANGELOG.md
-- **Commit:** _not yet published_
+- **Commit:** 0880801
 
 ## 2026-11-25 · ui, job · Candidates: what each company does and its competitors
 - **What:** The stock detail window (opened by clicking a ticker on Candidates, Recommendations or Today) has a new
