@@ -50,7 +50,8 @@ export default function IncomeSleeve({ data }: { data: Record<string, any> }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
               <Stat label="In T-bill funds" value={fmtUsd(value)} sub={num(inc.unrealizedUsd) != null ? `Price change ${fmtUsd(num(inc.unrealizedUsd), true)}` : undefined} />
               <Stat label="Est. interest / month" value={fmtUsd(monthly)} color={monthly ? 'var(--ok)' : undefined} sub={annual != null ? `${fmtUsd(annual)} a year` : undefined} />
-              <Stat label="Interest earned (est.)" value={fmtUsd(earned, true)} color={earned ? 'var(--ok)' : undefined} sub="Since buying, at the current yield" />
+              <Stat label="Interest paid" value={fmtUsd(earned, true)} color={earned ? 'var(--ok)' : undefined}
+                sub={num(inc.interestAccruedUsd) != null ? `Counted in profit · ~${fmtUsd(num(inc.interestAccruedUsd))} building up, not counted yet` : 'Counted in profit once paid'} />
               <Stat label="Idle cash" value={fmtUsd(idle)} sub={reserve != null ? `After a ${fmtUsd(reserve)} trading reserve` : undefined} />
             </div>
 

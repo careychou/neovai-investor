@@ -136,10 +136,18 @@ export default function Portfolio({ goals, data, saveHoldings }: { goals: Goals 
   const invested = num(a.invested) ?? 0
   const realized = num(a.realizedUsd) ?? 0
   const unrealized = num(a.unrealizedUsd) ?? 0
-  const cash = num(a.cash) ?? budget - invested + realized
+  const income = num(a.incomeUsd) ?? num(review.dividends?.paidUsd) ?? 0
+  const pendingIncome = num(review.dividends?.pendingUsd) ?? 0
+  const payouts: any[] = Array.isArray(review.dividends?.items) ? review.dividends.items : []
+  // Dividends paid on holdings added by hand: extra money, like the rest of those holdings.
+  const manualPaid = manual.length ? num(review.manual?.dividendsPaidUsd) ?? 0 : 0
+  const manualPending = manual.length ? num(review.manual?.dividendsPendingUsd) ?? 0 : 0
+  const paidOf = (m: ManualHolding): number | null => num((reviewedManual[m.id] ?? {}).dividendsPaidUsd)
+  const needsDate = manual.filter((m) => !m.buyDate)
+  const cash = num(a.cash) ?? budget - invested + realized + income
   const marketValue = num(a.marketValue) ?? invested + unrealized
   const totalValue = num(a.totalValue) ?? cash + marketValue
-  const totalUsd = num(a.totalUsd) ?? realized + unrealized
+  const totalUsd = num(a.totalUsd) ?? realized + unrealized + income
   const totalPct = num(a.totalPct) ?? (totalUsd / budget) * 100
   const goalPct = num(a.goalPct) ?? 10
   const goalProgress = (totalPct / goalPct) * 100
@@ -157,7 +165,7 @@ export default function Portfolio({ goals, data, saveHoldings }: { goals: Goals 
   const accountUnrealized = unrealized + mt.unrealizedUsd
   const today = appToday == null && !hasManual ? null : (appToday ?? 0) + mt.dayChangeUsd
   const todayPct = !hasManual ? appTodayPct : today != null && accountValue - today ? (today / (accountValue - today)) * 100 : null
-  const allTimeUsd = totalUsd + mt.unrealizedUsd
+  const allTimeUsd = totalUsd + mt.unrealizedUsd + manualPaid
   const allTimePct = hasManual ? (allTimeUsd / (budget + mt.costBasis)) * 100 : totalPct
   const positions = holdings.length + mt.count
 
@@ -197,15 +205,18 @@ export default function Portfolio({ goals, data, saveHoldings }: { goals: Goals 
         <Card label="Invested" value={usd(accountInvested)} sub={`Market value ${usd(accountMarket)}`} />
         <Card label="Realized profit" value={usd(realized, true)} color={tone(realized)} sub={`${closedCount} closed trade${closedCount === 1 ? '' : 's'}`} />
         <Card label="Unrealized profit" value={usd(accountUnrealized, true)} color={tone(accountUnrealized)} sub={`${positions} open position${positions === 1 ? '' : 's'}`} />
+        <Card label="Dividends & interest" value={usd(income, true)} color={tone(income)}
+          sub={pendingIncome > 0 ? `Paid only · ${usd(pendingIncome)} pending, not counted` : 'Paid to you only'} />
         <Card label={`Total profit vs ${goalPct}% goal`} value={pct(totalPct)} color={tone(totalPct)}
-          sub={`${usd(totalUsd, true)} of ${usd(num(a.goalUsd) ?? (budget * goalPct) / 100)} goal${hasManual ? ' · app calls only' : ''}`}>
+          sub={`${usd(totalUsd, true)} (price ${usd(realized + unrealized, true)} + income ${usd(income, true)}) of ${usd(num(a.goalUsd) ?? (budget * goalPct) / 100)} goal${hasManual ? ' · app calls only' : ''}`}>
           <div style={{ height: 6, borderRadius: 3, background: 'rgba(127,127,127,0.2)', marginTop: 8, overflow: 'hidden' }}>
             <div style={{ width: `${Math.max(0, Math.min(100, goalProgress))}%`, height: '100%', background: goalProgress >= 100 ? GREEN : totalPct < 0 ? RED : BLUE }} />
           </div>
         </Card>
         <Card label="Win rate" value={winRate == null ? 'n/a' : `${winRate.toFixed(0)}%`} sub={closedCount ? `${wins} of ${closedCount} trades won` : 'No closed trades yet'} />
         <Card label="Today's change" value={today == null ? 'no data' : usd(today, true)} color={tone(today)} sub={todayPct == null ? undefined : pct(todayPct)} />
-        {hasManual && <Card label="Dividend income / yr" value={usd(mt.estAnnualIncome)} sub="Your holdings, last 12 months of payouts" />}
+        {hasManual && <Card label="Your funds: dividends paid" value={usd(manualPaid, true)} color={tone(manualPaid)}
+          sub={needsDate.length ? `${needsDate.length} holding${needsDate.length > 1 ? 's' : ''} need a buy date to count` : `Est. ${usd(mt.estAnnualIncome)} a year`} />}
       </div>
 
       {/* Holdings */}
@@ -214,6 +225,12 @@ export default function Portfolio({ goals, data, saveHoldings }: { goals: Goals 
         action={saveHoldings && <button onClick={() => { setEditing('new'); setSaveError('') }} disabled={editing === 'new'} title="Add a stock or fund you bought outside the app's calls"><Plus size={13} style={{ verticalAlign: -2 }} /> Add holding</button>}>
         {editing === 'new' && <HoldingForm onSave={upsert} onCancel={() => setEditing(null)} />}
         {saveError && <div style={{ padding: '8px 16px', color: RED, fontSize: 12 }}>{saveError}</div>}
+        {needsDate.length > 0 && (
+          <div style={{ padding: '8px 16px', fontSize: 12.5, color: '#e0a030', borderBottom: BORDER }}>
+            Dividends on {[...new Set(needsDate.map((m) => m.ticker))].join(', ')} can't be counted yet: the app needs to know when you bought {needsDate.length > 1 ? 'them' : 'it'} to tell which monthly payouts you received.
+            Click {needsDate.length > 1 ? 'each' : 'the'} row, choose <b>Edit</b>, fill in <b>Bought on</b>, then click “Update account”.
+          </div>
+        )}
         {positions === 0 ? <Empty text="You hold no positions. Accepted Buy calls show up here after the next update, and you can add what you bought elsewhere with “Add holding”." /> : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead><tr>
@@ -269,13 +286,18 @@ export default function Portfolio({ goals, data, saveHoldings }: { goals: Goals 
                       {kind && kind !== 'Stock' && <Badge>{kind}</Badge>}
                       {(q?.name ?? m.name) && <div style={{ fontSize: 11, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', ...MUTED }}>{q?.name ?? m.name}</div>}
                     </td>
-                    <td style={td}>{fmtDate(m.buyDate)}</td>
+                    <td style={td}>{m.buyDate ? fmtDate(m.buyDate) : (
+                      <button onClick={(e) => { e.stopPropagation(); setEditing(m.id); setConfirmDelete(null) }} title="Needed to count the dividends you've been paid"
+                        style={{ fontSize: 11, padding: '2px 8px', color: '#e0a030', borderColor: '#e0a03066' }}>Add date</button>
+                    )}</td>
                     <td style={td}>{m.shares}</td>
                     <td style={td}>{px(m.avgCost)}</td>
                     <td style={{ ...td, fontWeight: 600 }}>{px(p.price)}</td>
                     <td style={{ ...td, color: tone(p.dayChangePct) }}>{pct(p.dayChangePct)}</td>
                     <td style={td}>{usd(p.marketValue)}</td>
-                    <td style={td}><div style={{ color: tone(p.unrealizedUsd), fontWeight: 600 }}>{usd(p.unrealizedUsd, true)}</div><Pill v={p.unrealizedPct}>{pct(p.unrealizedPct)}</Pill></td>
+                    <td style={td}><div style={{ color: tone(p.unrealizedUsd), fontWeight: 600 }}>{usd(p.unrealizedUsd, true)}</div><Pill v={p.unrealizedPct}>{pct(p.unrealizedPct)}</Pill>
+                      {(paidOf(m) ?? 0) > 0 && <div style={{ fontSize: 11, marginTop: 3, color: GREEN }} title="Dividends paid to you on this lot. Total = price change + dividends.">+{usd(paidOf(m))} div · total {usd((p.unrealizedUsd ?? 0) + paidOf(m)!, true)}</div>}
+                    </td>
                     <td style={{ ...td, textAlign: 'center', ...MUTED }}>{q?.yieldPct && q.ttmDividend ? `${q.yieldPct.toFixed(2)}% yield` : '—'}</td>
                     <td style={td}>{p.daysHeld ?? '—'}</td>
                   </tr>,
@@ -340,6 +362,38 @@ export default function Portfolio({ goals, data, saveHoldings }: { goals: Goals 
             </tbody>
           </table>
         )}
+      </Section>
+
+      {/* Dividends and interest */}
+      <Section title="Dividends & interest"
+        right={<>App calls paid <b style={{ color: tone(income) }}>{usd(income, true)}</b>{pendingIncome > 0 && <> · pending {usd(pendingIncome)}</>}
+          {hasManual && <> · your funds paid <b style={{ color: tone(manualPaid) }}>{usd(manualPaid, true)}</b>{manualPending > 0 && <> · pending {usd(manualPending)}</>}</>}</>}>
+        {payouts.length === 0 ? <Empty text="No dividends or interest paid yet. A payout counts once you owned the shares before its ex-date and the cash has been paid." /> : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead><tr>
+              <th style={{ ...th, ...left }}>Symbol</th><th style={th}>Type</th><th style={th}>Ex-date</th><th style={th}>Paid on</th>
+              <th style={th}>Per share</th><th style={th}>Shares</th><th style={th}>Amount</th><th style={th}>Status</th>
+            </tr></thead>
+            <tbody>
+              {payouts.map((d, i) => {
+                const paid = d.status === 'paid'
+                return (
+                  <tr key={`${d.ticker}-${d.exDate}-${i}`} style={paid ? undefined : MUTED} title={d.source ?? ''}>
+                    <td style={{ ...td, ...left }}><b>{d.ticker}</b>{d.source === 'manual' && <Badge>Added by you</Badge>}</td>
+                    <td style={td}>{d.kind === 'interest' ? 'Interest' : 'Dividend'}</td>
+                    <td style={td}>{fmtDate(d.exDate)}</td>
+                    <td style={td}>{d.payDate ? fmtDate(d.payDate) : '—'}</td>
+                    <td style={td}>{num(d.perShare) == null ? '—' : `$${num(d.perShare)!.toFixed(4)}`}</td>
+                    <td style={td}>{num(d.shares) ?? '—'}</td>
+                    <td style={{ ...td, fontWeight: 600, color: paid ? GREEN : undefined }}>{usd(num(d.amountUsd), paid)}</td>
+                    <td style={td}><span style={{ fontSize: 12, color: d.status === 'needs buy date' ? '#e0a030' : undefined }}>{paid ? 'Paid · counted' : d.status === 'needs buy date' ? 'Needs buy date' : 'Pending · not counted'}</span></td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+        {typeof review.dividends?.note === 'string' && review.dividends.note && <div style={{ padding: '8px 16px 12px', fontSize: 12, ...MUTED }}>{review.dividends.note}</div>}
       </Section>
     </div>
   )

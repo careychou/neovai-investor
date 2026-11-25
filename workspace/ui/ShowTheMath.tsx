@@ -63,11 +63,11 @@ export default function ShowTheMath({ data }: { data: Record<string, any> }) {
   if (!review.account) return null
 
   const trades: any[] = (Array.isArray(review.holdings) ? review.holdings : []).filter((h: any) => h?.source !== 'manual')
-  const income: any[] = Array.isArray(review.income?.holdings) ? review.income.holdings : []
+  const sleeve: any[] = Array.isArray(review.income?.holdings) ? review.income.holdings : []
   const closed: any[] = Array.isArray(review.closed) ? review.closed : []
   const open_ = [
     ...trades.map((h) => ({ ...h, where: 'Positions table' })),
-    ...income.map((h) => ({ ...h, where: 'Income section below' })),
+    ...sleeve.map((h) => ({ ...h, where: 'Income section below' })),
   ]
   const cost = (h: any) => num(h.costBasis) ?? (num(h.entry) ?? 0) * (num(h.shares) ?? 0)
   const mv = (h: any) => num(h.marketValue) ?? (num(h.price) ?? 0) * (num(h.shares) ?? 0)
@@ -78,8 +78,11 @@ export default function ShowTheMath({ data }: { data: Record<string, any> }) {
   const unrealized = r2(open_.reduce((s, h) => s + unr(h), 0))
   const invested = r2(open_.reduce((s, h) => s + cost(h), 0))
   const market = r2(open_.reduce((s, h) => s + mv(h), 0))
-  const cash = r2(budget - invested + realized)
-  const total = r2(realized + unrealized)
+  const payouts: any[] = (Array.isArray(review.dividends?.items) ? review.dividends.items : []).filter((d: any) => d?.status === 'paid' && d?.source !== 'manual')
+  const incomeSaved = num(a.incomeUsd) ?? num(review.dividends?.paidUsd)
+  const income = r2(payouts.length ? payouts.reduce((s, d) => s + (num(d.amountUsd) ?? 0), 0) : incomeSaved ?? 0)
+  const cash = r2(budget - invested + realized + income)
+  const total = r2(realized + unrealized + income)
   const value = r2(cash + market)
   const wins = closed.filter((c) => (num(c.realizedUsd) ?? 0) > 0)
   const losses = closed.filter((c) => (num(c.realizedUsd) ?? 0) <= 0)
@@ -106,7 +109,7 @@ export default function ShowTheMath({ data }: { data: Record<string, any> }) {
         <Calculator size={15} />
         <span className="lu-title" style={{ margin: 0 }}>How these numbers add up</span>
         <span style={{ marginLeft: 'auto', fontSize: 12, ...MUTED }}>
-          {usd(realized)} realized {unrealized < 0 ? '−' : '+'} {usd(Math.abs(unrealized), false)} unrealized = <b style={{ color: tone(total), opacity: 1 }}>{usd(total)}</b>
+          {usd(realized)} realized {unrealized < 0 ? '−' : '+'} {usd(Math.abs(unrealized), false)} unrealized + {usd(income, false)} income = <b style={{ color: tone(total), opacity: 1 }}>{usd(total)}</b>
         </span>
       </button>
 
@@ -118,8 +121,9 @@ export default function ShowTheMath({ data }: { data: Record<string, any> }) {
             {losses.length > 0 && <>the {losses.length} losing trade{losses.length > 1 ? 's' : ''} ({losses.map((c) => c.ticker).join(', ')}) cost {usd(lossSum)} in total. </>}
             {wins.length > 0 && <>The winning sale{wins.length > 1 ? 's' : ''} ({wins.map((c) => c.ticker).join(', ')}) made {usd(winSum)}. </>}
             {open_.length > 0 && <>Positions you still hold are {usd(unrealized)} on paper{losingOpen.length > 0 && <>, with {losingOpen.map((h) => h.ticker).join(', ')} down and the rest up</>}. </>}
-            The gains slightly outweigh the losses, so the net is <b style={{ color: tone(total) }}>{usd(total)}</b> on a {usd(budget, false)} budget ({((total / budget) * 100).toFixed(2)}%).
-            {income.length > 0 && <> Note: the Positions table above lists only trades. {income.map((h) => h.ticker).join(', ')} {income.length > 1 ? 'are' : 'is'} in the Income section below but still counts in the cards.</>}
+            {income > 0 ? <>Dividends and interest actually paid to you add {usd(income)}. </> : <>No dividends or interest have been paid yet, so income adds $0. </>}
+            Together, the gains outweigh the losses, so the net is <b style={{ color: tone(total) }}>{usd(total)}</b> on a {usd(budget, false)} budget ({((total / budget) * 100).toFixed(2)}%).
+            {sleeve.length > 0 && <> Note: the Positions table above lists only trades. {sleeve.map((h) => h.ticker).join(', ')} {sleeve.length > 1 ? 'are' : 'is'} in the Income section below but still counts in the cards.</>}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
@@ -129,15 +133,20 @@ export default function ShowTheMath({ data }: { data: Record<string, any> }) {
             <Sum title="2 · Unrealized profit" help="Paper gain or loss on what you still hold: (today's price − price paid) × shares."
               lines={open_.map(openLine)} total={unrealized} totalLabel="Unrealized profit" saved={num(a.unrealizedUsd)} />
 
-            <Sum title="3 · Total profit" help="Everything you've made or lost since the start."
-              lines={[{ label: 'Realized (closed trades)', value: realized }, { label: 'Unrealized (still held)', value: unrealized }]}
+            <Sum title="2b · Dividends & interest" help="Only payouts actually paid to you: you owned the shares before the ex-date and the cash arrived. Pending and estimated income is not counted."
+              lines={payouts.length ? payouts.map((d) => ({ label: `${d.ticker} · ${d.kind === 'interest' ? 'interest' : 'dividend'}`, detail: `$${(num(d.perShare) ?? 0).toFixed(4)} × ${d.shares} sh · paid ${d.payDate ?? ''}`, value: num(d.amountUsd) })) : [{ label: 'Nothing paid yet', value: 0, muted: true }]}
+              total={income} totalLabel="Income" saved={incomeSaved} />
+
+            <Sum title="3 · Total profit" help="Everything you've made or lost since the start: price change plus income paid."
+              lines={[{ label: 'Realized (closed trades)', value: realized }, { label: 'Unrealized (still held)', value: unrealized }, { label: 'Dividends & interest paid', value: income }]}
               total={total} totalLabel="Total profit" saved={num(a.totalUsd)} />
 
-            <Sum title="4 · Cash" help="What you started with, minus what's tied up in holdings, plus or minus closed-trade results." sign={false}
+            <Sum title="4 · Cash" help="What you started with, minus what's tied up in holdings, plus or minus closed-trade results, plus income paid." sign={false}
               lines={[
                 { label: 'Starting budget', value: budget, sign: false },
                 { label: 'Paid for holdings still held', detail: open_.map((h) => `${h.ticker} ${usd(cost(h), false)}`).join(' + '), value: -invested },
                 { label: 'Realized profit', value: realized },
+                { label: 'Dividends & interest paid', value: income },
               ]}
               total={cash} totalLabel="Cash" saved={num(a.cash)} />
 
@@ -158,7 +167,7 @@ export default function ShowTheMath({ data }: { data: Record<string, any> }) {
 
           <div style={{ fontSize: 12, marginTop: 12, ...MUTED }}>
             Win rate counts closed trades only: {wins.length} winning out of {closed.length}. A partial sale (like selling some shares of a stock you still hold) counts as its own closed trade.
-            Hand-added holdings are extra money and are left out of these sums. Prices as of {String(a.asOf ?? review.date ?? '')}.
+            Holdings you added yourself (and their dividends) are extra money and are left out of these sums; their dividends are listed under Dividends & interest. Prices as of {String(a.asOf ?? review.date ?? '')}.
           </div>
         </div>
       )}

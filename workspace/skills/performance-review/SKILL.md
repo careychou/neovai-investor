@@ -50,23 +50,46 @@ For each open ticker:
 - days held = calendar days from the buy date to today (0 on the buy day)
 - distance to stop and target in percent, and one line on what to watch next (earnings date, a level, news, or "below stop: sell call due").
 
+## 3b. Dividends and interest paid (only cash actually paid counts)
+
+Total return is price change plus the dividends and interest the account has actually been paid. A payout counts only when both are true:
+1. **The account was entitled to it:** the lot was bought before the ex-dividend date and not yet sold on that date. Shares = shares held at the end of the day before the ex-date (after any partial sale before then). This covers closed lots too: a lot sold after its ex-date still keeps that payout.
+2. **The cash has arrived:** the payment date is on or before today.
+
+How to find payouts, for every ticker the app's calls have held since 2026-11-22 (trades, long-term holds and the income sleeve):
+- Dividend history with ex-dates and payment dates: `https://api.nasdaq.com/api/quote/<TICKER>/dividends?assetclass=stocks` (use `assetclass=etf` for funds). Fields: `exOrEffDate`, `paymentDate`, `amount`. As a fallback for the ex-date and amount, Yahoo's chart answer with `&events=div` lists them under `events.dividends` (that date is the ex-date, not the payment date).
+- If Nasdaq has no payment date, try Yahoo `https://query2.finance.yahoo.com/v10/finance/quoteSummary/<TICKER>?modules=calendarEvents` (`dividendDate` is the latest or next payment date) and the fund issuer's distributions page (most monthly-income ETFs publish ex, record and pay dates). Say which source you used.
+- If you cannot find the payment date, or it is after today, list the payout as **pending** with amount and dates, and do **not** count it. Never guess an amount or a date; leave out a payout you cannot confirm and say so in the report.
+- Upcoming and estimated income (the sleeve's monthly estimate, a coming dividend) is information only. It never goes into any profit, cash or goal number.
+
+For each counted payout: amount $ = shares entitled × amount per share, rounded to cents. Income $ = sum of counted payouts. **Holdings added by hand** (`records/data/holdings.json`, often monthly-income funds such as OMAH, JEPI, DIV, SPHD): apply the same two tests to **each lot separately** (the same ticker can have several lots with different buy dates). Look back over the last 12 months of payouts.
+- Entitlement uses the lot's `buyDate`: it counts for every ex-date after the buy date. `addedAt` is when the user typed it into the app, **not** when they bought it; never use it as a buy date.
+- A lot with no `buyDate` cannot be checked: list its recent payouts (the last 3) with `status: "needs buy date"` and do not count them. Say in the summary which holdings need a buy date ("Edit the holding on the Performance screen and fill in Bought on").
+- Put these payouts in `dividends.items` with `source: "manual"` and the lot's `holdingId`. Give each manual holding its `dividendsPaidUsd` and `totalReturnUsd` (= unrealized + dividends paid), and fill the `manual` totals `dividendsPaidUsd` and `dividendsPendingUsd`.
+- They stay out of every `account`, `goal`, `income`, `cash` and win-rate number, like the rest of `manual`. The Performance screen adds them to the account itself.
+
+Stops, targets, the 2% loss limit, the 20% profit cap and the daily and weekly loss limits stay on **price only**. Income is shown next to them as context but never moves a stop or hides a loss.
+
 ## 4. Compute the account summary
 
 Budget = the stricter of `goals.json` budget and the user-preference rule ($10,000).
 
 - invested = sum of cost basis of open holdings
 - market value = sum of market value of open holdings (if a price is missing, use cost basis for that holding and say so)
-- realized profit = sum of realized $ of all closed trades
-- unrealized profit = sum of unrealized $ of open holdings
-- cash = budget − invested + realized profit
+- realized profit = sum of realized $ of all closed trades (price only)
+- unrealized profit = sum of unrealized $ of open holdings (price only)
+- income = sum of counted payouts from section 3b (paid cash only)
+- price profit $ = realized + unrealized
+- cash = budget − invested + realized profit + income
 - total value = cash + market value
-- total profit $ = realized + unrealized; total profit % = total profit $ / budget × 100
+- total profit $ = price profit + income; total profit % = total profit $ / budget × 100
+- Per holding and per closed lot, also give the income it has been paid, and total return $ = price change $ + income $.
 - goal: `overallProfitPct` (from `goals.json`, default 10) % of budget. Progress = total profit $ / goal $ × 100.
 - win rate = closed trades with realized $ > 0 / all closed trades (a trade that breaks even is not a win). Write "n/a" when there are no closed trades.
 - today's change $ = sum of day change $ of open holdings + for trades closed today (exit − previous close) × shares. Today's change % = today's change $ / (total value − today's change $) × 100.
 - week P&L = the same over the last 5 sessions, for the weekly loss limit.
 
-Round dollars to cents and percents to two decimals. Check: total value − budget must equal total profit $.
+Round dollars to cents and percents to two decimals. Check: total value − budget must equal total profit $ (realized + unrealized + income).
 
 ## 5. Goal progress and limits
 
@@ -79,7 +102,8 @@ Lots in SGOV, BIL, USFR or SHV (or any call marked as a sleeve call) are the inc
 - List them under the sleeve, not under trading holdings. They do not count as open positions, and their closed parts do not count toward wins, losses or the win rate. They do count in invested, market value, cash, total value and the profit totals.
 - Get the 13-week T-bill yield from Yahoo `^IRX` (range=1y, interval=1wk): today, about 3 months ago, and the trend (rising if more than 0.10 points higher than 3 months ago, falling if more than 0.10 lower, else flat). If you cannot fetch it, write "no data" and use null.
 - Each fund's yield: its published 30-day SEC yield if you can fetch it, otherwise the T-bill yield, and say which. Estimated monthly interest = market value × yield ÷ 100 ÷ 12. Annual = monthly × 12.
-- Interest earned so far = sum over sleeve lots of cost basis × yield ÷ 100 × days held ÷ 365, as an estimate. Label it as an estimate. These funds pay interest monthly and their price drops slightly on the payout day, so the price change alone understates the return.
+- Interest paid = the sleeve's counted payouts from section 3b (cash actually received). This is the only sleeve interest that counts toward profit.
+- Interest accrued so far = sum over sleeve lots of cost basis × yield ÷ 100 × days held ÷ 365, as an estimate of interest not yet paid. Label it as an estimate; it never counts toward profit. These funds pay interest monthly and their price drops slightly on the payout day, so the price change alone understates the return.
 - Reserve = 5 × the per-stock cap. Idle cash = cash − reserve (0 if negative). If idle cash is over $500, say in the note that it could earn about idle cash × yield ÷ 100 ÷ 12 per month in the sleeve.
 - Flag a sleeve fund that is down 2% from entry (rule 4).
 

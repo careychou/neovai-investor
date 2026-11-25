@@ -19,7 +19,9 @@ Before you finish, call save_data with the name "review" and this shape:
     "marketValue": 0,
     "realizedUsd": 0,
     "unrealizedUsd": 0,
-    "totalUsd": 0,
+    "incomeUsd": 0,  // dividends and interest actually paid (skill section 3b)
+    "pricePnlUsd": 0,  // realizedUsd + unrealizedUsd
+    "totalUsd": 0,  // pricePnlUsd + incomeUsd
     "totalPct": 0,
     "goalPct": 10,  // = overallProfitPct from goals.json
     "goalUsd": 1000,  // = budget × goalPct / 100
@@ -36,15 +38,22 @@ Before you finish, call save_data with the name "review" and this shape:
     "ticker": "ABC", "acceptedDate": "YYYY-MM-DD", "shares": 0,
     "entry": 0, "price": 0, "prevClose": 0, "priceSource": "source, time",
     "marketValue": 0, "costBasis": 0, "unrealizedUsd": 0, "unrealizedPct": 0,
+    "incomeUsd": 0, "totalReturnUsd": 0,
     "dayChangeUsd": 0, "dayChangePct": 0,
     "stop": 0, "target": 0, "daysHeld": 0,
     "watch": "what to watch next, one line"
   }],
   "closed": [{
     "ticker": "ABC", "buyDate": "YYYY-MM-DD", "sellDate": "YYYY-MM-DD", "shares": 0,
-    "entry": 0, "exit": 0, "realizedUsd": 0, "realizedPct": 0, "daysHeld": 0,
+    "entry": 0, "exit": 0, "realizedUsd": 0, "realizedPct": 0, "incomeUsd": 0, "daysHeld": 0,
     "reason": "why it was sold, short"
   }],
+  "dividends": {
+    "paidUsd": 0,
+    "pendingUsd": 0,
+    "items": [{ "ticker": "WMT", "kind": "dividend | interest", "exDate": "YYYY-MM-DD", "payDate": "YYYY-MM-DD or null", "perShare": 0, "shares": 0, "amountUsd": 0, "status": "paid | pending | needs buy date", "source": "app | manual", "holdingId": "id from holdings.json, manual rows only", "dataSource": "Nasdaq dividends, time" }],
+    "note": "one line: what was paid, what is coming, anything you could not confirm"
+  },
   "metrics": [{ "label": "Hit rate", "value": "4 of 6" }],
   "riskMetrics": { "asOf": "YYYY-MM-DD", "days": 0, "vsSpyPct": 0, "alphaPct": 0, "beta": 0, "sharpe": 0, "sortino": 0, "maxDrawdownPct": 0, "volPct": 0, "winRatePct": null, "byBucket": [{ "bucket": "long | trade | income", "returnPct": 0, "winRatePct": null }], "note": "one line: what these numbers say about risk and what to change" },
   "outcomes": [{ "date": "YYYY-MM-DD", "ticker": "ABC", "action": "Buy", "decision": "accepted | declined | none", "entry": 0, "now": 0, "result": "+3.1%", "status": "open | target hit | stopped out" }],
@@ -55,11 +64,14 @@ Before you finish, call save_data with the name "review" and this shape:
     "unrealizedUsd": 0,
     "dayChangeUsd": 0,
     "estAnnualIncomeUsd": 0,
+    "dividendsPaidUsd": 0,
+    "dividendsPendingUsd": 0,
+    "needsBuyDate": ["id from holdings.json"],
     "holdings": [{
       "id": "id from holdings.json", "source": "manual", "ticker": "SCHD", "name": "fund or company name", "kind": "Stock | ETF | Mutual fund",
       "buyDate": "YYYY-MM-DD or null", "shares": 0, "avgCost": 0, "price": 0, "prevClose": 0, "dayChangePct": 0, "priceSource": "source, time",
       "marketValue": 0, "costBasis": 0, "unrealizedUsd": 0, "unrealizedPct": 0, "daysHeld": null,
-      "ttmDividendPerShare": 0, "yieldPct": 0, "estAnnualIncomeUsd": 0, "exDividendDate": "Mon D, YYYY or null",
+      "ttmDividendPerShare": 0, "yieldPct": 0, "estAnnualIncomeUsd": 0, "dividendsPaidUsd": 0, "totalReturnUsd": 0, "exDividendDate": "Mon D, YYYY or null",
       "watch": "what to watch next, one line"
     }]
   },
@@ -75,20 +87,24 @@ Before you finish, call save_data with the name "review" and this shape:
     "unrealizedUsd": 0,
     "estMonthlyIncomeUsd": 0,
     "estAnnualIncomeUsd": 0,
-    "interestEarnedUsd": 0,
+    "interestEarnedUsd": 0,  // interest actually paid (counted)
+    "interestAccruedUsd": 0,  // estimate of interest not yet paid (not counted)
     "reserveUsd": 5000,
     "idleCashUsd": 0,
-    "holdings": [{ "ticker": "SGOV", "name": "fund name", "acceptedDate": "YYYY-MM-DD", "shares": 0, "entry": 0, "price": 0, "priceSource": "source, time", "marketValue": 0, "costBasis": 0, "unrealizedUsd": 0, "yieldPct": 0, "estMonthlyIncomeUsd": 0, "daysHeld": 0 }],
+    "holdings": [{ "ticker": "SGOV", "name": "fund name", "acceptedDate": "YYYY-MM-DD", "shares": 0, "entry": 0, "price": 0, "priceSource": "source, time", "marketValue": 0, "costBasis": 0, "unrealizedUsd": 0, "incomeUsd": 0, "yieldPct": 0, "estMonthlyIncomeUsd": 0, "daysHeld": 0 }],
     "note": "one line: what to do with idle cash or the sleeve"
   },
-  "goal": { "targetPct": 10, "targetUsd": 1000, "realizedUsd": 0, "unrealizedUsd": 0, "totalUsd": 0, "pct": 0, "invested": 0, "openPositions": 0, "todayPnlUsd": 0, "weekPnlUsd": 0, "asOf": "YYYY-MM-DD HH:MM ET", "note": "one line on the pace toward the overall profit goal" }
+  "goal": { "targetPct": 10, "targetUsd": 1000, "realizedUsd": 0, "unrealizedUsd": 0, "incomeUsd": 0, "totalUsd": 0, "pct": 0, "invested": 0, "openPositions": 0, "todayPnlUsd": 0, "weekPnlUsd": 0, "asOf": "YYYY-MM-DD HH:MM ET", "note": "one line on the pace toward the overall profit goal" }
 }
 ```
 
 Rules:
 - All money and percent values are plain numbers (no "$" or "%"). Percents are in percent units (2.5 means 2.5%). Use null, never a guess, for a price you could not fetch, and write "no data" in `priceSource`.
 - `holdings` are the accepted Buys still open (one row per ticker). `closed` holds one row per closed part (Sell part or Sell all), newest sell first. Use empty lists when there are none.
-- `winRatePct` is null when there are no closed trades.
+- `winRatePct` is null when there are no closed trades. Wins and losses are judged on price only (`realizedUsd`), not income.
+- Dividends and interest follow section 3b of the skill: count a payout only when the account held the shares before the ex-date **and** the payment date is on or before today. `incomeUsd` and every `incomeUsd` per row are those paid amounts only. Pending payouts go in `dividends.items` with `status: "pending"` and in `pendingUsd`, never in any profit, cash or goal number. Always fill `dividends`, with zeros and an empty list when nothing was paid. `cash` includes `incomeUsd`, so total value − budget = `totalUsd` still holds.
+- Holdings: `totalReturnUsd` = `unrealizedUsd` + `incomeUsd`.
+- Holdings added by hand: check payouts per lot by its `buyDate` (section 3b). Lots without a buy date get `status: "needs buy date"` rows (not counted) and their id in `manual.needsBuyDate`. Their paid amounts go only in `manual` and `dividends.items` (with `source: "manual"`), never in `account.incomeUsd` or `dividends.paidUsd`.
 - `riskMetrics` follows section 6b of the performance-review skill. Use null for any value with fewer than 5 trading days of history, and say so in its note.
 - Holdings added by hand (`records/data/holdings.json`) go only in `manual`, never in `holdings`, `closed` or `income`. They are extra money: leave them out of every `account`, `goal` and `income` number (cash, invested, totals, goal progress, win rate, loss limits). The Performance screen adds them to the account value itself. Always fill `manual`, with zeros and an empty list when the file is missing or empty. Use null and "no data" for any price you could not fetch.
 - `targetPct` is `overallProfitPct` from goals.json and `targetUsd` = budget × targetPct / 100 (the numbers above are examples at the defaults).

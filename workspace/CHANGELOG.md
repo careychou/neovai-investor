@@ -8,11 +8,34 @@ Format: date · area · short title, then what changed, why, files, and the comm
 
 ---
 
+## 2026-11-25 · skill, job, ui · Count monthly dividends on funds you added (OMAH, JEPI, DIV, SPHD, SPYD)
+- **What:** The account review now checks paid dividends on holdings added by hand, lot by lot, over the last 12 months,
+  using each lot's "Bought on" date (not the date it was typed into the app). Lots without a buy date get their recent payouts
+  listed as "Needs buy date" and not counted. Performance screen: a "Your funds: dividends paid" card, dividends paid and total return
+  under each hand-added lot, those payouts in the Dividends & interest table marked "Added by you", the "all time" line includes them,
+  and an "Add date" button plus a notice for lots missing a buy date. Also tells the review where to find payment dates when Nasdaq has none.
+  These stay outside the app's cash, goal and win rate, like the rest of hand-added holdings.
+- **Why:** The user pointed out OMAH and the other funds pay monthly and those payouts were not counted. All six lots were entered without a buy date,
+  and the previous rule only covered the app's own calls.
+- **Files:** skills/performance-review/SKILL.md, jobs/review.md, ui/Portfolio.tsx, ui/ShowTheMath.tsx, CHANGELOG.md
+- **Commit:** _not yet published_
+
+## 2026-11-25 · skill, job, ui · Total profit counts dividends and interest actually paid
+- **What:** Total profit is now price change (realized + unrealized) plus dividends and interest **actually paid**.
+  A payout counts only if the account held the shares before the ex-date and the payment date has passed.
+  Pending and estimated income is listed but never counted. Paid income goes into cash, so
+  total value − budget still equals total profit. Stops, loss limits and win rate stay on price only.
+  Performance screen: new "Dividends & interest" card and payouts table, total profit split into price + income,
+  "How these numbers add up" gains an income step, and the Income section shows interest paid separately from the estimate.
+- **Why:** The user wanted total profit to balance price changes against dividends and interest, counting only payouts actually received.
+- **Files:** skills/performance-review/SKILL.md, jobs/review.md, ui/Portfolio.tsx, ui/ShowTheMath.tsx, ui/IncomeSleeve.tsx, CHANGELOG.md
+- **Commit:** _not yet published_
+
 ## 2026-11-24 · tooling · Add this change log
 - **What:** Added this file so each commit has a readable explanation of its change.
 - **Why:** The automatic commit message is not informative enough for audits; the user asked for more detail.
 - **Files:** CHANGELOG.md
-- **Commit:** _not yet published_
+- **Commit:** 646719d
 
 ## 2026-11-24 · ui · Performance: "How these numbers add up" section
 - **What:** New collapsible section on the Performance screen that shows the arithmetic behind Realized profit,
