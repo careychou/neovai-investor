@@ -8,6 +8,16 @@ Format: date · area · short title, then what changed, why, files, and the comm
 
 ---
 
+## 2026-11-25 · ui, skill · Performance: total dividends at the top and "Realized + dividends" card
+- **What:** The Performance header shows a "Total dividends" box (dividends and interest actually paid on the app's calls plus
+  your own funds, split into the two, with any pending amount noted) and adds "+$X dividends" to the today / all-time line.
+  A new "Realized + dividends" card sits next to Realized profit: closed-trade profit plus all dividends paid.
+  The performance-review skill now reads payment dates from stockanalysis.com dividend pages first (Nasdaq returned none for the
+  user's ETFs, so every payout was left "pending" and all dividend totals showed $0).
+- **Why:** The user wanted total dividends visible at the top and realized profit shown with dividends.
+- **Files:** ui/Portfolio.tsx, skills/performance-review/SKILL.md, CHANGELOG.md
+- **Commit:** _not yet published_
+
 ## 2026-11-25 · ui, job · Candidates: what each company does and its competitors
 - **What:** The stock detail window (opened by clicking a ticker on Candidates, Recommendations or Today) has a new
   "About the company" box at the top: a plain-English summary (saved by the evaluation), the full company description,
@@ -17,7 +27,7 @@ Format: date · area · short title, then what changed, why, files, and the comm
   "what they do" line under its name. The evaluate job now saves `business`, `industry` and `competitors` for each ranked stock.
 - **Why:** The user couldn't tell from the names what the companies do or who they compete with.
 - **Files:** ui/lib/companyProfile.ts (new), ui/CompanyAbout.tsx (new), ui/RecommendationsPanel.tsx, ui/CandidatesPanel.tsx, jobs/evaluate.md, CHANGELOG.md
-- **Commit:** _not yet published_
+- **Commit:** 09f50a4
 
 ## 2026-11-25 · ui, skill, job · Fix: Market Scan box stuck on the Nov 22 scan
 - **What:** The Market Scan box on the Today screen now reads the latest saved scan (what "Run market scan" saves), so it updates on

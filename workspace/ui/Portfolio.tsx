@@ -144,6 +144,9 @@ export default function Portfolio({ goals, data, saveHoldings }: { goals: Goals 
   const manualPending = manual.length ? num(review.manual?.dividendsPendingUsd) ?? 0 : 0
   const paidOf = (m: ManualHolding): number | null => num((reviewedManual[m.id] ?? {}).dividendsPaidUsd)
   const needsDate = manual.filter((m) => !m.buyDate)
+  // All dividends and interest actually paid: app calls + your own funds.
+  const allDividends = Math.round((income + manualPaid) * 100) / 100
+  const allPending = Math.round((pendingIncome + manualPending) * 100) / 100
   const cash = num(a.cash) ?? budget - invested + realized + income
   const marketValue = num(a.marketValue) ?? invested + unrealized
   const totalValue = num(a.totalValue) ?? cash + marketValue
@@ -189,12 +192,25 @@ export default function Portfolio({ goals, data, saveHoldings }: { goals: Goals 
             <span style={{ color: tone(today), fontWeight: 600 }}>{today == null ? 'Today: no data' : `${usd(today, true)} (${pct(todayPct)})`}</span>
             <span style={MUTED}> today · </span>
             <span style={{ color: tone(allTimeUsd), fontWeight: 600 }}>{usd(allTimeUsd, true)} ({pct(allTimePct)})</span>
-            <span style={MUTED}> all time</span>
+            <span style={MUTED}> all time · </span>
+            <span style={{ color: tone(allDividends), fontWeight: 600 }}>{usd(allDividends, true)}</span>
+            <span style={MUTED}> dividends{allPending > 0 ? ` (${usd(allPending)} pending)` : ''}</span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap', marginLeft: 'auto' }}>
+        <div title="Dividends and interest actually paid, on the app's calls and your own funds"
+          style={{ border: BORDER, borderRadius: 12, padding: '10px 16px', background: `${GREEN}10`, minWidth: 200 }}>
+          <div style={{ fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', ...MUTED }}>Total dividends</div>
+          <div style={{ fontSize: 26, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: tone(allDividends) }}>{usd(allDividends, true)}</div>
+          <div style={{ fontSize: 12, ...MUTED }}>
+            {hasManual ? `App ${usd(income)} · your funds ${usd(manualPaid)}` : 'Paid to you'}
+            {allPending > 0 && <div>{usd(allPending)} pending, not counted yet</div>}
           </div>
         </div>
         <div style={{ textAlign: 'right', fontSize: 12, ...MUTED }}>
           {hasAccount ? `Prices as of ${reviewedAt}` : 'No account data yet. Click “Update account” to compute it.'}
           {newSince > 0 && <div style={{ color: '#e0a030', opacity: 1 }}>{newSince} accepted call{newSince > 1 ? 's' : ''} since the last update. Update to include {newSince > 1 ? 'them' : 'it'}.</div>}
+        </div>
         </div>
       </div>
 
@@ -204,6 +220,8 @@ export default function Portfolio({ goals, data, saveHoldings }: { goals: Goals 
         <Card label="Cash" value={usd(cash)} sub={`${((cash / Math.max(accountValue, 1)) * 100).toFixed(1)}% of account`} />
         <Card label="Invested" value={usd(accountInvested)} sub={`Market value ${usd(accountMarket)}`} />
         <Card label="Realized profit" value={usd(realized, true)} color={tone(realized)} sub={`${closedCount} closed trade${closedCount === 1 ? '' : 's'}`} />
+        <Card label="Realized + dividends" value={usd(realized + allDividends, true)} color={tone(realized + allDividends)}
+          sub={`Trades ${usd(realized, true)} + dividends ${usd(allDividends, true)}${hasManual ? ' (incl. your funds)' : ''}`} />
         <Card label="Unrealized profit" value={usd(accountUnrealized, true)} color={tone(accountUnrealized)} sub={`${positions} open position${positions === 1 ? '' : 's'}`} />
         <Card label="Dividends & interest" value={usd(income, true)} color={tone(income)}
           sub={pendingIncome > 0 ? `Paid only · ${usd(pendingIncome)} pending, not counted` : 'Paid to you only'} />
