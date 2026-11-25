@@ -224,6 +224,9 @@ export default function Portfolio({ goals, data, saveHoldings }: { goals: Goals 
         right={positions ? `${positions} holding${positions > 1 ? 's' : ''}${hasManual ? ` · ${mt.count} added by you` : ''} · click a row for details` : undefined}
         action={saveHoldings && <button onClick={() => { setEditing('new'); setSaveError('') }} disabled={editing === 'new'} title="Add a stock or fund you bought outside the app's calls"><Plus size={13} style={{ verticalAlign: -2 }} /> Add holding</button>}>
         {editing === 'new' && <HoldingForm onSave={upsert} onCancel={() => setEditing(null)} />}
+        {editing && editing !== 'new' && manual.some((m) => m.id === editing) && (
+          <HoldingForm key={editing} initial={manual.find((m) => m.id === editing)} onSave={upsert} onCancel={() => setEditing(null)} />
+        )}
         {saveError && <div style={{ padding: '8px 16px', color: RED, fontSize: 12 }}>{saveError}</div>}
         {needsDate.length > 0 && (
           <div style={{ padding: '8px 16px', fontSize: 12.5, color: '#e0a030', borderBottom: BORDER }}>
@@ -278,16 +281,15 @@ export default function Portfolio({ goals, data, saveHoldings }: { goals: Goals 
                 const q = quotes[m.ticker]
                 const kind = q?.kind ?? m.kind
                 const watch = reviewedManual[m.id]?.watch ?? reviewedManual[m.ticker]?.watch
-                if (editing === m.id) return <tr key={key}><td colSpan={10} style={{ padding: 0 }}><HoldingForm initial={m} onSave={upsert} onCancel={() => setEditing(null)} /></td></tr>
                 return [
-                  <tr key={key} onClick={() => setOpen(expanded ? null : key)} style={{ cursor: 'pointer', background: expanded ? 'rgba(127,127,127,0.06)' : undefined }}>
+                  <tr key={key} onClick={() => setOpen(expanded ? null : key)} style={{ cursor: 'pointer', background: editing === m.id ? 'rgba(59,130,246,0.10)' : expanded ? 'rgba(127,127,127,0.06)' : undefined }}>
                     <td style={{ ...td, ...left }}>
-                      <b style={{ fontSize: 14 }}>{m.ticker}</b><Badge title="You added this holding. It counts in your account as extra money, outside the app's cash.">Added by you</Badge>
+                      <b style={{ fontSize: 14 }}>{m.ticker}</b>{editing === m.id && <Badge>Editing above</Badge>}<Badge title="You added this holding. It counts in your account as extra money, outside the app's cash.">Added by you</Badge>
                       {kind && kind !== 'Stock' && <Badge>{kind}</Badge>}
                       {(q?.name ?? m.name) && <div style={{ fontSize: 11, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', ...MUTED }}>{q?.name ?? m.name}</div>}
                     </td>
                     <td style={td}>{m.buyDate ? fmtDate(m.buyDate) : (
-                      <button onClick={(e) => { e.stopPropagation(); setEditing(m.id); setConfirmDelete(null) }} title="Needed to count the dividends you've been paid"
+                      <button onClick={(e) => { e.stopPropagation(); setEditing(m.id); setConfirmDelete(null); setSaveError(''); (e.currentTarget.closest('section') as HTMLElement | null)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }} title="Needed to count the dividends you've been paid"
                         style={{ fontSize: 11, padding: '2px 8px', color: '#e0a030', borderColor: '#e0a03066' }}>Add date</button>
                     )}</td>
                     <td style={td}>{m.shares}</td>
@@ -310,7 +312,7 @@ export default function Portfolio({ goals, data, saveHoldings }: { goals: Goals 
                         {m.note && <span><span style={MUTED}>Note </span>{m.note}</span>}
                         {p.price == null && <span style={{ color: '#e0a030' }}>No live price{quoteErrors[m.ticker] ? ` (${quoteErrors[m.ticker]})` : ''}: counted at cost.</span>}
                         <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }} onClick={(e) => e.stopPropagation()}>
-                          {saveHoldings && <button onClick={() => { setEditing(m.id); setConfirmDelete(null) }}><Pencil size={12} style={{ verticalAlign: -1 }} /> Edit</button>}
+                          {saveHoldings && <button onClick={(e) => { setEditing(m.id); setConfirmDelete(null); setSaveError(''); (e.currentTarget.closest('section') as HTMLElement | null)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}><Pencil size={12} style={{ verticalAlign: -1 }} /> Edit</button>}
                           {saveHoldings && (confirmDelete === m.id
                             ? <><span style={{ alignSelf: 'center' }}>Remove {m.ticker}?</span><button onClick={() => remove(m.id)} style={{ color: RED }}>Remove</button><button onClick={() => setConfirmDelete(null)}>Keep</button></>
                             : <button onClick={() => setConfirmDelete(m.id)}><Trash2 size={12} style={{ verticalAlign: -1 }} /> Remove</button>)}

@@ -59,26 +59,31 @@ export default function HoldingForm({ initial, onSave, onCancel }: { initial?: M
   const cost = Number(shares) * Number(avgCost)
   return (
     <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)', background: 'rgba(127,127,127,0.04)' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '120px 110px 130px 150px 1fr', gap: 10, alignItems: 'end' }}>
-        <label style={label}>Ticker
+      {initial && <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>Edit {initial.ticker}{initial.name ? ` · ${initial.name}` : ''} ({initial.shares} shares)</div>}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'end' }}>
+        <label style={{ ...label, width: 110 }}>Ticker
           <input style={input} value={ticker} autoFocus={!initial} placeholder="SCHD" disabled={!!initial}
             onChange={(e) => { setTicker(e.target.value.toUpperCase()); setFound(null); setLookup('idle') }}
             onBlur={(e) => { if (e.target.value) void look(e.target.value) }} />
         </label>
-        <label style={label}>Shares
+        <label style={{ ...label, width: 110 }}>Shares
           <input style={input} type="number" min="0" step="any" value={shares} placeholder="25" onChange={(e) => setShares(e.target.value)} />
         </label>
-        <label style={label}>Avg cost / share
+        <label style={{ ...label, width: 130 }}>Avg cost / share
           <input style={input} type="number" min="0" step="any" value={avgCost} placeholder={found?.price != null ? found.price.toFixed(2) : '0.00'} onChange={(e) => setAvgCost(e.target.value)} />
         </label>
-        <label style={label}>Bought on
+        <label style={{ ...label, width: 150 }}>Bought on
           <input style={input} type="date" value={buyDate} max={isoDay(Date.now())} onChange={(e) => setBuyDate(e.target.value)} />
         </label>
-        <label style={label}>Note
+        <label style={{ ...label, flex: '1 1 180px', minWidth: 160, maxWidth: 360 }}>Note
           <input style={input} value={note} placeholder="IRA, gift, bought at Schwab…" maxLength={500} onChange={(e) => setNote(e.target.value)} />
         </label>
+        <span style={{ display: 'flex', gap: 8 }}>
+          <button className="primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : initial ? 'Save changes' : 'Add holding'}</button>
+          <button onClick={onCancel} disabled={saving}>Cancel</button>
+        </span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, fontSize: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginTop: 10, fontSize: 12 }}>
         <span style={{ flex: 1, ...MUTED }}>
           {lookup === 'busy' ? 'Looking up…'
             : lookup === 'none' ? `No quote found for ${cleanTicker(ticker)}.`
@@ -86,9 +91,7 @@ export default function HoldingForm({ initial, onSave, onCancel }: { initial?: M
             : found ? `${found.name} · ${found.kind}${found.price != null ? ` · now $${found.price.toFixed(2)}` : ''}${cost > 0 ? ` · cost $${cost.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : ''}`
             : 'Counted in your account as extra money: it does not use the app’s cash.'}
         </span>
-        {error && <span style={{ color: 'var(--bad, #e5484d)' }}>{error}</span>}
-        <button onClick={onCancel} disabled={saving}>Cancel</button>
-        <button className="primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : initial ? 'Save changes' : 'Add holding'}</button>
+        {error && <span style={{ color: 'var(--bad, #e5484d)', fontWeight: 600 }}>{error}</span>}
       </div>
     </div>
   )

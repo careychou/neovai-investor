@@ -8,6 +8,15 @@ Format: date · area · short title, then what changed, why, files, and the comm
 
 ---
 
+## 2026-11-25 · ui · Fix: could not save an edited holding
+- **What:** The Edit form for a holding you added was drawn inside the wide Positions table, so its Save changes and Cancel
+  buttons sat off-screen to the right (only reachable by scrolling the table sideways). The form now opens at the top of
+  the Positions box, at full width, with a title naming the holding; Save changes and Cancel sit right after the fields and
+  the fields wrap on narrow windows. The row being edited is highlighted with "Editing above", and Edit / Add date scroll the form into view.
+- **Why:** The user filled in "Bought on" for OMAH and could not find a way to save it.
+- **Files:** ui/Portfolio.tsx, ui/HoldingForm.tsx, CHANGELOG.md
+- **Commit:** _not yet published_
+
 ## 2026-11-25 · skill, job, ui · Count monthly dividends on funds you added (OMAH, JEPI, DIV, SPHD, SPYD)
 - **What:** The account review now checks paid dividends on holdings added by hand, lot by lot, over the last 12 months,
   using each lot's "Bought on" date (not the date it was typed into the app). Lots without a buy date get their recent payouts
@@ -18,7 +27,7 @@ Format: date · area · short title, then what changed, why, files, and the comm
 - **Why:** The user pointed out OMAH and the other funds pay monthly and those payouts were not counted. All six lots were entered without a buy date,
   and the previous rule only covered the app's own calls.
 - **Files:** skills/performance-review/SKILL.md, jobs/review.md, ui/Portfolio.tsx, ui/ShowTheMath.tsx, CHANGELOG.md
-- **Commit:** _not yet published_
+- **Commit:** 405e8b4
 
 ## 2026-11-25 · skill, job, ui · Total profit counts dividends and interest actually paid
 - **What:** Total profit is now price change (realized + unrealized) plus dividends and interest **actually paid**.
@@ -29,7 +38,7 @@ Format: date · area · short title, then what changed, why, files, and the comm
   "How these numbers add up" gains an income step, and the Income section shows interest paid separately from the estimate.
 - **Why:** The user wanted total profit to balance price changes against dividends and interest, counting only payouts actually received.
 - **Files:** skills/performance-review/SKILL.md, jobs/review.md, ui/Portfolio.tsx, ui/ShowTheMath.tsx, ui/IncomeSleeve.tsx, CHANGELOG.md
-- **Commit:** _not yet published_
+- **Commit:** 405e8b4
 
 ## 2026-11-24 · tooling · Add this change log
 - **What:** Added this file so each commit has a readable explanation of its change.
