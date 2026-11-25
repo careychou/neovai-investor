@@ -15,12 +15,12 @@ const tag = (color: string): CSSProperties => ({
 })
 const small: CSSProperties = { fontSize: 12, opacity: 0.65 }
 
-export default function MarketScanPanel({ scan }: { scan: MarketScan | null }) {
+export default function MarketScanPanel({ scan, trendsTitle = 'Trends likely to move the market' }: { scan: MarketScan | null; trendsTitle?: string }) {
   if (!scan) {
     return (
       <section className="market-scan" style={box}>
         <h2 style={{ margin: 0 }}>Market scan</h2>
-        <p className="muted">No market scan yet. Ask the agent to run the daily scan.</p>
+        <p className="muted">No market scan yet. Click “Run market scan” above.</p>
       </section>
     )
   }
@@ -33,7 +33,7 @@ export default function MarketScanPanel({ scan }: { scan: MarketScan | null }) {
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0 }}>Market scan</h2>
         <span style={small}>
-          As of {new Date(scan.asOf).toLocaleString()}
+          As of {/T12:00:00$/.test(scan.asOf) ? new Date(scan.asOf).toLocaleDateString() : new Date(scan.asOf).toLocaleString()}
           {stale && <b style={{ color: SEVERITY_COLOR.high, marginLeft: 8 }}>Stale: older than 24h</b>}
         </span>
       </div>
@@ -48,7 +48,7 @@ export default function MarketScanPanel({ scan }: { scan: MarketScan | null }) {
           {scan.metrics.map((m) => {
             const dir = changeDirection(m.change)
             return (
-              <div key={m.item} title={`${m.source} · ${m.time}`}
+              <div key={m.item} title={[m.source, m.time].filter(Boolean).join(' · ')}
                 style={{ border: '1px solid rgba(127,127,127,0.25)', borderRadius: 6, padding: '6px 10px', minWidth: 110 }}>
                 <div style={small}>{m.item}</div>
                 <b>{showValue(m.value)}</b>{' '}
@@ -74,22 +74,22 @@ export default function MarketScanPanel({ scan }: { scan: MarketScan | null }) {
                 <b>{a.title}</b>
                 {a.tickers?.length ? <span style={{ ...small, marginLeft: 8 }}>{a.tickers.join(', ')}</span> : null}
               </div>
-              <div style={{ marginTop: 2 }}>{a.detail}</div>
-              <div style={small}>{a.source} · {a.time}</div>
+              {a.detail && <div style={{ marginTop: 2 }}>{a.detail}</div>}
+              {(a.source || a.time) && <div style={small}>{[a.source, a.time].filter(Boolean).join(' · ')}</div>}
             </li>
           ))}
         </ul>
       )}
 
-      <h3 style={h3}>Trends likely to move the market</h3>
+      <h3 style={h3}>{trendsTitle}</h3>
       {scan.trends.length === 0 ? (
         <p className="muted">No trends recorded.</p>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {scan.trends.map((t, i) => (
             <li key={i} style={{ marginBottom: 8 }}>
-              <b style={{ color: DIR_COLOR[t.direction], marginRight: 6 }}>{ARROW[t.direction]}</b>
-              <b>{t.title}</b>: {t.why} <span style={small}>({t.source})</span>
+              {t.direction !== 'mixed' && <b style={{ color: DIR_COLOR[t.direction], marginRight: 6 }}>{ARROW[t.direction]}</b>}
+              <b>{t.title}</b>{t.why && <>: {t.why}</>} {t.source && <span style={small}>({t.source})</span>}
             </li>
           ))}
         </ul>

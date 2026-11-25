@@ -8,6 +8,16 @@ Format: date · area · short title, then what changed, why, files, and the comm
 
 ---
 
+## 2026-11-25 · ui, skill, job · Fix: Market Scan box stuck on the Nov 22 scan
+- **What:** The Market Scan box on the Today screen now reads the latest saved scan (what "Run market scan" saves), so it updates on
+  every run: mood, index and risk metrics, alerts (bad/warn/info shown as high/medium/low), news likely to move the market, and
+  leading/lagging sectors. The box shows a "Stale" flag when the scan is over a day old. Removed the outdated "No recommendations yet" and
+  version lines. The market-scan skill no longer asks the runtime agent to rewrite a screen file; the scan job now also saves the scan time.
+- **Why:** The box read a fixed snapshot built into the screen. The skill told the runtime agent to overwrite that file after each scan,
+  but that agent may write only inside records/, so the box never changed after Nov 22 even though scans ran.
+- **Files:** ui/Today.tsx, ui/MarketScanPanel.tsx, skills/market-scan/SKILL.md, jobs/scan.md, CHANGELOG.md
+- **Commit:** _not yet published_
+
 ## 2026-11-25 · ui · Fix: could not save an edited holding
 - **What:** The Edit form for a holding you added was drawn inside the wide Positions table, so its Save changes and Cancel
   buttons sat off-screen to the right (only reachable by scrolling the table sideways). The form now opens at the top of
@@ -15,7 +25,7 @@ Format: date · area · short title, then what changed, why, files, and the comm
   the fields wrap on narrow windows. The row being edited is highlighted with "Editing above", and Edit / Add date scroll the form into view.
 - **Why:** The user filled in "Bought on" for OMAH and could not find a way to save it.
 - **Files:** ui/Portfolio.tsx, ui/HoldingForm.tsx, CHANGELOG.md
-- **Commit:** _not yet published_
+- **Commit:** 50c17b6
 
 ## 2026-11-25 · skill, job, ui · Count monthly dividends on funds you added (OMAH, JEPI, DIV, SPHD, SPYD)
 - **What:** The account review now checks paid dividends on holdings added by hand, lot by lot, over the last 12 months,

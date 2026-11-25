@@ -52,19 +52,14 @@ The crowd chases what is already on the front page. The long bucket (user-prefer
 
 ## Today panel
 
-After every scan, overwrite `ui/marketScanData.ts` so the Market scan panel on the Today tab shows it. Set `latestScan` to a `MarketScan` object (type in `logic/marketScan.ts`):
+The Market scan box on the Today tab reads the scan you save with save_data("market", …) (see the scan job), so it updates on every run. Do not write any file under `ui/`; the runtime agent may write only inside `records/`. Put the scan's time in `asOf` (ISO, for example 2026-11-25T11:45:00Z) so the box can show when it ran and flag a stale scan.
 
-- `asOf`: ISO time of the scan. `mood`: label and one-line reason.
-- `metrics`: one entry per index and risk metric, with source and time. Use `null` for any value or change you could not fetch. The panel shows "no data".
-- `alerts`: the important items that can move the market today: macro events (Fed, CPI, jobs data), earnings, big movers, halts, rating changes and major news. Give each a severity:
-  - `high`: likely to move the whole market or a held/watched ticker more than 3%.
-  - `medium`: likely to move a sector or a single large stock.
-  - `low`: worth knowing, small expected effect.
-  Every alert needs a plain-English `detail` saying why it matters, plus source and time.
-- `trends`: three to five trends likely to move the market in the coming days (for example rates, oil, AI spending, earnings season), each with direction, reason and source.
-- `sectors`: leading and lagging. `watchList`: same as above.
+- `mood` starts with risk-on, mixed or risk-off, then the reason.
+- `alerts`: the important items that can move the market today (macro events, earnings, big movers, halts, rating changes, major news). Level `bad` = likely to move the whole market or a held or watched ticker more than 3%; `warn` = a sector or one large stock; `info` = worth knowing.
+- `news`: headline, why it matters and source.
+- `sectors`: sector, change and note, so the box can show leaders and laggards.
 
-Only put fetched data in this file. Never write numbers from memory.
+Only save fetched data. Never write numbers from memory.
 
 ## Sources that worked
 

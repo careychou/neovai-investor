@@ -9,6 +9,7 @@ Before you finish, call save_data with the name "market" and this shape, so the 
 ```json
 {
   "date": "YYYY-MM-DD",
+  "asOf": "ISO time of the scan, e.g. 2026-11-25T11:45:00Z",
   "mood": "risk-on | mixed | risk-off, with the reason in one line",
   "summary": "two to four sentences in markdown",
   "metrics": [{ "label": "S&P 500", "value": 6012.3, "change": "+0.4%", "note": "source, time" }],
