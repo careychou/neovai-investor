@@ -192,7 +192,7 @@ flowchart LR
    a `SubAgents` (sub-agents card) attached to its session: the `task` tool runs helpers in parallel or in the
    background, Stop cancels them all, and a finished background helper wakes the chat (`session.notify`).
 6. **Publish**: the `publish` handler calls `publish()` (git-publish card) with the Settings repository; for a
-   remote address it downloads it into a temporary folder (deleted afterwards), mirrors the workspace into its `workspace/`, commits and pushes, sends each step to the window
+   remote address it downloads it into a temporary folder (deleted afterwards), mirrors the workspace into its `workspace/`, commits and pushes. The commit message is written by the default model (`commitMessageWriter`) from the staged diff and the Codify requests made since the last commit (`shell/main/publish-context.ts`): a subject, a "Why:" reason and a "What changed:" list, falling back to a short folder summary if the model fails. It sends each step to the window
    as Codify chat events, and saves the steps into that chat (`agent.append`).
 7. **Bridge**: a handler map typed by `shared/api.ts` is registered with `ipcMain.handle` for every channel;
    `preload` exposes the same channels as `window.api`.
@@ -353,7 +353,7 @@ tag in `kernel.json`.
 
 ```sh
 git clone https://github.com/careychou/neovai-kernel ../neovai-kernel
-git -C ../neovai-kernel checkout v0.15.0
+git -C ../neovai-kernel checkout v0.17.0
 npm install
 npm run build && npx electron .
 ```

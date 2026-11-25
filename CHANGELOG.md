@@ -2,6 +2,10 @@
 
 What each version of Neovai Investor added, newest first.
 
+## 0.18.0 (kernel v0.17.0)
+
+Commit messages that say why. Publish now asks the default model to write the commit from the staged diff and the Codify requests made since the last commit: a plain subject line, a "Why:" reason taken from what you asked for, and a "What changed:" list grouped by screens, skills and instructions, jobs and logic. The step shows in the chat as "Write the commit message". If no model is set or it fails, the old short message ("Codify: update ui (2 files)") is used.
+
 ## 0.17.0
 
 Three buckets and risk numbers. The budget now splits 40% long-term holds, 40% trades and 20% T-bill income. The market scan screens for under-followed quality companies (small and mid caps with few analysts, solid returns on capital, cash flow and low debt) for the long bucket, and flags hype names (RSI over 75, heavy short interest, a news spike), which are allowed only as quick trades. Long holds get their own rules (user-preference 26 to 33): an 8–10% stop or a close under the 200-day average, holding through earnings while the thesis holds, a third sold at +30% with the rest trailed, up to 1.5× the per-stock cap. Every call shows its bucket, Candidates filters by bucket, and Recommendations shows each bucket against its cap. Market Scan's chart reaches 2, 5 and 10 years and Max with 50/200-day (or 10/40-week) averages and the yearly growth rate, and a **Details** button and a clickable watch list open any stock's long chart, key stats (valuation, quality, risk, who follows it, growth and income) and hidden-jewel checks. Performance adds **Trend and risk vs the S&P 500**: growth of $100 against SPY, drawdown, and alpha, beta, Sharpe, Sortino, max drawdown, volatility, correlation and up/down capture, for your account since the start or for today's mix over 1, 3 or 5 years. The review job saves the same numbers as `riskMetrics`, and the recommendation job trims trades when beta, drawdown or Sharpe say the account is running hot.

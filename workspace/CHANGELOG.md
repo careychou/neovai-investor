@@ -1,8 +1,8 @@
 # Change log
 
 Every change Codify makes to this workspace is recorded here, newest first, before it is published.
-The commit message the Publish button writes only names the folders changed ("Codify: update ui (2 files)");
-this file says what changed, why, and what the user sees. Match an entry to a commit by date and file list.
+Since app 0.18.0 the Publish button writes a full commit message too (a subject, "Why:" and "What changed:"),
+using these entries and the Codify requests behind them. This file stays the longer, readable history.
 
 Format: date · area · short title, then what changed, why, files, and the commit once published.
 

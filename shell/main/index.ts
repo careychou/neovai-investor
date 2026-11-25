@@ -13,7 +13,8 @@ import { createAgent, type Agent } from './agent'
 import { loadGoals, saveGoals } from './goals'
 import { HOLDINGS_FILE, saveHoldings } from './holdings'
 import { seedWorkspace } from './seed'
-import { publish } from 'neovai-kernel/cards/git-publish'
+import { commitMessageWriter, publish } from 'neovai-kernel/cards/git-publish'
+import { publishContext } from './publish-context'
 import { writeSkill, type SkillSource } from 'neovai-kernel/cards/skills'
 import { APP_DEFAULTS, runtimeModelOf, type AppSettings } from './app-settings'
 import { CHANGED_CHANNEL, CHANNELS, PANEL_LIBRARIES, EVENT_CHANNEL, RUN_EVENT_CHANNEL, type Api, type AppInfo, type MainState } from '../shared/api'
@@ -207,6 +208,11 @@ app.whenReady().then(() => {
         const r = await publish({
           ...(remote ? { url: repo } : { repo }),
           mirror: repo ? { from: workspace, to: 'workspace', exclude: PUBLISH_EXCLUDE } : undefined,
+          // The commit says why: the Codify requests since the last commit go to the model with the diff.
+          describe: settings.defaultModel ? commitMessageWriter({
+            adapter, model: settings.defaultModel,
+            context: (info) => publishContext(agent.listChats(), (id) => agent.openChat(id), info.since)
+          }) : undefined,
           onEvent: (e) => win?.webContents.send(EVENT_CHANNEL, chatId, e)
         })
         const text = !repo ? 'Set the repository under Settings › Publish, then try again.' : r.text
