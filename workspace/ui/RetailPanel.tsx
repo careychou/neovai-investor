@@ -35,7 +35,7 @@ export default function RetailPanel() {
   const r: AnyObj | null = data?.retail ?? null
   const [seg, setSeg] = usePanelState<string>('retail.segment', 'all')
   const [open, setOpen] = useState<string | null>(null)
-  const [view, setView] = usePanelState<'market' | 'digest'>('retail.view', 'market')
+  const [view, setView] = usePanelState<'market' | 'digest'>('retail.view2', 'digest')
   const digestCount = r?.digest ? asObjs(r.digest.top).length + asObjs(r.digest.lanes).reduce((n, l) => n + asObjs(l.items).length, 0) : 0
 
   const allTickers = useMemo(() => SEGMENTS.flatMap((s) => s.tickers), [])
@@ -63,7 +63,7 @@ export default function RetailPanel() {
               {r.summary && <div style={{ marginTop: 6, fontSize: 13.5 }}><Markdown text={String(r.summary)} /></div>}
             </>
           ) : (
-            <div style={muted}>No retail scan yet. Click “Run retail scan” above to collect today's retail news, shopper data and dates.</div>
+            <div style={muted}>No news scan yet. Click “Run news scan” above for a 3-day digest across retail, tech, data, AI and design, plus the retail market.</div>
           )}
         </div>
         <div style={{ ...muted, textAlign: 'right' }}>
@@ -74,8 +74,8 @@ export default function RetailPanel() {
 
       {/* View switch */}
       <div style={{ display: 'flex', gap: 6, marginTop: 14, borderBottom: BORDER, paddingBottom: 8 }}>
+        <button className={view === 'digest' ? 'button primary' : 'button'} onClick={() => setView('digest')}>News digest{digestCount ? ` · ${digestCount}` : ''}</button>
         <button className={view === 'market' ? 'button primary' : 'button'} onClick={() => setView('market')}>Retail market</button>
-        <button className={view === 'digest' ? 'button primary' : 'button'} onClick={() => setView('digest')}>3-day digest{digestCount ? ` · ${digestCount}` : ''}</button>
       </div>
 
       {view === 'digest' ? <div style={{ marginTop: 10 }}><RetailDigest digest={r?.digest} /></div> : <>

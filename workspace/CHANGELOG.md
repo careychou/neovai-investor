@@ -8,6 +8,19 @@ Format: date · area · short title, then what changed, why, files, and the comm
 
 ---
 
+## 2026-11-27 · skill, job, ui · Retail tab renamed "Today's News"; every news lane required
+- **What:** The Retail tab is now "Today's News", its button "Run news scan", and the news digest is the first view (Retail market second).
+  The digest rules now require at least 3 items in every lane (aim 4 or 5), working lane by lane; Top 3 stories stay in their lane's list
+  and the screen shows them once. Each lane has a checked list of RSS feeds (retail, tech and security, data and ML, AI, design) to read first,
+  then Google News search to find second outlets. Items may be confirmed by two outlets, one primary source (company post, paper, filing),
+  or the publishing outlet for analysis pieces. Links must go to the article itself, not a Google News redirect, and paragraphs must come
+  from reading the article.
+- **Why:** The first digest had Retail 3 (all moved to Top 3, so the lane looked empty), Tech 1, Data 1, AI 5 and Design 0. Design and data
+  news is often announced by one company or research group, so the two-outlet rule dropped it, and many links went to news search
+  pages the scan could not open.
+- **Files:** skills/retail-scan/SKILL.md, jobs/retail.md, ui/screens/retail.json, ui/RetailPanel.tsx, ui/RetailDigest.tsx, CHANGELOG.md
+- **Commit:** _not yet published_
+
 ## 2026-11-27 · skill, job, ui · Retail scan adds a 3-day, five-lane news digest
 - **What:** Each retail scan now also builds a digest of the last 3 days: 15 to 22 stories across five lanes
   (Grocery & Retail, Technology including security, Analytics / Data Science / ML, AI frontier and applications, Design & human-AI experience),
@@ -19,7 +32,7 @@ Format: date · area · short title, then what changed, why, files, and the comm
   delivery and the search-only workaround removed. Also removed an employer name from the retail-scan private-grocer list.
 - **Why:** The user wanted the retail scan to cover these lanes in one place, safe for a public repository.
 - **Files:** skills/retail-scan/SKILL.md, jobs/retail.md, ui/RetailDigest.tsx (new), ui/RetailPanel.tsx, CHANGELOG.md
-- **Commit:** _not yet published_
+- **Commit:** c15ec58
 
 ## 2026-11-25 · skill, job, ui · New Retail tab with its own retail scan
 - **What:** New "Retail" tab, after Market Scan, with a "Run retail scan" button. Its panel shows:

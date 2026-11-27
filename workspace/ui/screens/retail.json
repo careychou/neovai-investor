@@ -1,16 +1,32 @@
 {
-  "title": "Retail",
+  "title": "Today's News",
   "order": 2,
-  "skills": ["retail-scan"],
+  "skills": [
+    "retail-scan"
+  ],
   "blocks": [
     {
       "type": "row",
       "blocks": [
-        { "type": "heading", "text": "Retail: grocery, big box, discount, staples" },
-        { "type": "run", "job": "retail", "label": "Run retail scan" }
+        {
+          "type": "heading",
+          "text": "Today's News: retail, tech, data, AI and design"
+        },
+        {
+          "type": "run",
+          "job": "retail",
+          "label": "Run news scan"
+        }
       ]
     },
-    { "type": "panel", "file": "ui/RetailPanel.tsx" },
-    { "type": "report", "title": "Last retail report", "job": "retail" }
+    {
+      "type": "panel",
+      "file": "ui/RetailPanel.tsx"
+    },
+    {
+      "type": "report",
+      "title": "Last news report",
+      "job": "retail"
+    }
   ]
 }

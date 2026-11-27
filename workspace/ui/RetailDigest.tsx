@@ -79,11 +79,14 @@ export default function RetailDigest({ digest }: { digest: AnyObj | null | undef
   const [showDropped, setShowDropped] = usePanelState<boolean>('retail.digestDropped', false)
 
   if (!digest) {
-    return <div style={{ ...muted, padding: '12px 0' }}>No digest yet. The next “Run retail scan” adds a 3-day digest across retail, technology, data, AI and design.</div>
+    return <div style={{ ...muted, padding: '12px 0' }}>No digest yet. Click “Run news scan” for a 3-day digest across retail, technology, data, AI and design.</div>
   }
   const top = asObjs(digest.top)
   const lanes: Record<string, AnyObj[]> = {}
-  for (const l of asObjs(digest.lanes)) lanes[str(l.key)] = asObjs(l.items)
+  // A top story is also listed in its lane (newer scans save it there too); never show or count it twice.
+  const key = (it: AnyObj) => (str(it.url) || str(it.headline)).toLowerCase()
+  const topKeys = new Set(top.map(key))
+  for (const l of asObjs(digest.lanes)) lanes[str(l.key)] = asObjs(l.items).filter((it) => !topKeys.has(key(it)))
   const total = top.length + ORDER.reduce((n, k) => n + (lanes[k]?.length ?? 0), 0)
   const covered = ORDER.filter((k) => (lanes[k]?.length ?? 0) > 0 || top.some((t) => t.lane === k)).length
   const dropped = asObjs(digest.dropped)
@@ -120,11 +123,13 @@ export default function RetailDigest({ digest }: { digest: AnyObj | null | undef
 
       {shown.map((k) => {
         const items = lanes[k] ?? []
-        const topHere = laneFilter === k ? top.filter((t) => t.lane === k) : []
+        const topHere = top.filter((t) => t.lane === k)
+        const showTop = laneFilter === k
         return (
           <div key={k}>
             <Pill lane={k} count={items.length + topHere.length} />
-            {topHere.map((it, i) => <Item key={`t${i}`} it={it} lane={k} top />)}
+            {showTop && topHere.map((it, i) => <Item key={`t${i}`} it={it} lane={k} top />)}
+            {!showTop && topHere.length > 0 && <div style={{ ...muted, margin: '4px 0' }}>+ {topHere.length} in Top 3 above</div>}
             {items.length + topHere.length === 0
               ? <div style={{ ...tile, ...muted }}>Nothing material this window.</div>
               : items.map((it, i) => <Item key={i} it={it} lane={k} />)}

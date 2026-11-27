@@ -1,10 +1,10 @@
 ---
-title: Retail scan
-description: Dive into retail (grocery, big box, discount, staples, home improvement, online) with the retail-scan skill.
+title: Today's News
+description: Today's News: a 3-day digest across retail, technology, data, AI and design, plus the retail market (grocery, big box, discount, staples), with the retail-scan skill.
 ---
 Follow the user-preference rules and the retail-scan skill. Do not evaluate candidates, recommend anything or change the market scan.
 
-Before you finish, call save_data with the name "retail" and this shape, so the Retail screen can show it:
+Before you finish, call save_data with the name "retail" and this shape, so the Today's News screen can show it:
 
 ```json
 {
@@ -41,6 +41,6 @@ Rules:
 - `news` is newest first within importance: the items most likely to move a stock come first. Tag every item with its segment and every ticker it names, so the screen can filter by segment and open a stock's details.
 - Put any `bad` news on a holding in `alerts` too, naming the ticker.
 - `yours` is [] when the user holds and watches no retail or staples names.
-- `digest` follows "Daily digest" in the retail-scan skill: last 3 days, 15 to 22 items, every item confirmed by at least two outlets and dated inside the window. Always list all five lanes, in the order above, even when a lane's items are empty. The three `top` items are not repeated in `lanes`. `sources` lists the other outlets that confirm the item.
+- `digest` follows "Daily digest" in the retail-scan skill: last 3 days, **at least 3 items in every lane** (aim for 4 or 5), 15 to 25 items in total, each confirmed (two outlets, a primary source, or the publishing outlet for analysis) and dated inside the window. Always list all five lanes, in the order above. The three `top` items are **also kept in their lane's `items`**. `url` is the article itself, never a Google News link. `sources` lists the other outlets or primary sources that confirm the item.
 
-Finish with a short report: the mood, the three most important retail stories, anything that affects the user's holdings, the next big dates, the number of digest items per lane, and any notable digest candidates you dropped and why.
+Finish with a short report: the mood, the three most important retail stories, anything that affects the user's holdings, the next big dates, the number of digest items per lane (and, for any lane under 3, which feeds and searches you checked), and any notable digest candidates you dropped and why.
