@@ -13,9 +13,14 @@ import { loadSkillSources, makeSkillTool, skillsPrompt, type Skill, type SkillSo
 import { loadJobs } from 'neovai-kernel/cards/runtime-agent'
 import { SubAgents } from 'neovai-kernel/cards/sub-agents'
 import { BLOCK_TYPES, makeCheckUiTool, type LiveUi } from 'neovai-kernel/cards/live-ui'
+import { ContextMemory, RECALL_PROMPT, type AutoCompactSettings } from 'neovai-kernel/cards/context-memory'
+import { queuedView, type QueuedPrompt } from 'neovai-kernel/cards/chat-view'
 
 /** The kernel cards this app is built from. `compose` fails at start if one is missing. */
-export const CARDS = ['agent-loop', 'model-providers', 'file-tools', 'shell', 'web-fetch', 'approval', 'session-store', 'settings', 'skills', 'chat-view', 'runtime-agent', 'live-ui', 'sub-agents', 'git-publish']
+export const CARDS = ['agent-loop', 'model-providers', 'file-tools', 'shell', 'web-fetch', 'approval', 'session-store', 'settings', 'skills', 'chat-view', 'runtime-agent', 'live-ui', 'sub-agents', 'git-publish', 'context-memory']
+
+/** Long chats are summarized once they get large and the prompt cache has gone cold; older turns stay searchable with recall. */
+export const AUTO_COMPACT: AutoCompactSettings = { mode: 'auto', threshold: 120_000, hardLimit: 160_000, idleMinutes: 5, keepRecent: 6, minGain: 20_000 }
 
 /** Files in the workspace the agent may read but never change. */
 export const READ_ONLY = ['goals.json', 'records/data/decisions.json', 'records/data/holdings.json']
@@ -51,7 +56,12 @@ export interface Agent {
   openChat(id: string): Message[]
   deleteChat(id: string): void
   renameChat(id: string, title: string): void
-  send(chatId: string, prompt: string, attachments?: Attachment[]): Promise<SendResult>
+  /** A prompt sent while the chat is working is queued under `qid` and joins at the agent's next step. */
+  send(chatId: string, prompt: string, attachments?: Attachment[], qid?: string): Promise<SendResult>
+  /** Takes a queued prompt back; false if the agent already has it. */
+  unqueue(chatId: string, qid: string): boolean
+  /** Prompts still waiting for the agent, for a reopened window. */
+  queued(chatId: string): QueuedPrompt[]
   stop(chatId: string): void
   isBusy(chatId: string): boolean
   /** Adds finished turns (such as a publish run's steps) to a chat and saves it. */
@@ -91,12 +101,13 @@ const BASE_PROMPT = `You are Codify, the coding agent inside Neovai Investor, a 
   - Styling: inline styles, or a plain .css file next to the panel imported with import './MyPanel.css' (scope its classes with a unique prefix). Use the app's classes (button, button.primary, .lu-* block classes) and variables var(--text), var(--muted), var(--line), var(--panel), var(--accent), var(--ok), var(--bad).
   - Split big panels into several .tsx files and shared helpers (for example ui/lib/*.ts, logic/*.ts) imported by relative path.
   - Nothing else: no other packages.
+  - Files on a screen: the readAttachments(files: File[]) prop reads picked or dropped files (images, PDFs, Word, PowerPoint, Excel, text) and returns { attachments, skipped }. Pass the attachments in the run input as input.attachments when starting a job, and the runtime agent receives the images and PDFs with its message.
   - Panels cannot write files other than preferences through savePrefs, and holdings through the saveHoldings(items) prop (the whole list; it returns the cleaned list and throws a plain message on a bad item). Jobs change data.
 
 # How to work
 - Act with your tools instead of describing what you would do. Call independent tools in parallel.
 - For big work with independent parts (research several stocks, or build a panel while you edit a skill), hand each part to a helper with the task tool, several in one reply so they run at the same time. Give each a complete prompt; they do not see this chat. Use mode "background" for long research you do not need right away; you are told when it ends.
-- The user may attach screenshots, mockups or files to a request. Treat an attached image as the reference for how a screen should look, and say which parts you matched.
+- The user may attach screenshots, mockups, PDFs, Word, PowerPoint or Excel files to a request. A file kept on disk is named in the message (records/attachments/...); read it again with your tools when you need more than was sent. Treat an attached image as the reference for how a screen should look, and say which parts you matched.
 - You may read and change files only inside the workspace folder. goals.json is read-only for you: only the user changes it, on the Preferences screen.
 - Shell commands run in the workspace folder without asking the user. Give each one a short description. Use an async shell for long jobs.
 - After you change a screen or panel, call check_ui and fix every problem it reports. A broken file never blanks the app; it keeps showing the last version that worked, so check.
@@ -119,6 +130,8 @@ export function createAgent(o: AgentOptions): Agent {
   const tools: ToolDef[] = [...makeFileTools({ root: o.workspace, readOnly: READ_ONLY }), ...shellTools, webFetch, makeSkillTool({ sources: skillSources })]
   if (o.ui) tools.push(makeCheckUiTool(o.ui))
   const sessions = new Map<string, Session>()
+  const memory = new ContextMemory({ store, session: (id) => sessions.get(id) })
+  void memory.backfill().catch(() => { /* old chats stay unsearchable until they are next saved */ })
 
   const systemPrompt = () => [
     BASE_PROMPT,
@@ -127,6 +140,7 @@ export function createAgent(o: AgentOptions): Agent {
     `# Skills (workspace skills/ first; shared ones are read-only, outside the workspace)\n${skillsPrompt(loadSkillSources(skillSources()))}`,
     `# Jobs\n${loadJobs(path.join(o.workspace, 'jobs')).map((j) => `- ${j.name}: ${j.description}`).join('\n') || '(none yet)'}`,
     `# Preferences (goals.json, read-only)\n${readText(path.join(o.workspace, 'goals.json')) || '(not set)'}`,
+    RECALL_PROMPT,
     `# Environment\n- Workspace: ${o.workspace}\n- Platform: ${os.platform()} ${os.arch()}\n- Date: ${new Date().toISOString().slice(0, 10)}`
   ].join('\n\n')
 
@@ -146,7 +160,7 @@ export function createAgent(o: AgentOptions): Agent {
         }
         o.onEvent(chatId, e)
         // A background helper can wake the chat after send() returned; save that turn too.
-        if (e.kind === 'agent_end' && e.agentId === 'main') { store.saveMessages(chatId, session.history); store.touchSession(chatId) }
+        if (e.kind === 'agent_end' && e.agentId === 'main' && store.getSession(chatId)) { store.saveMessages(chatId, session.history); memory.indexTurns(chatId, session.history); store.touchSession(chatId) }
       },
       requestPermission: async () => 'allow',
       askUser: async () => ''
@@ -161,7 +175,7 @@ export function createAgent(o: AgentOptions): Agent {
     const session: Session = new Session({
       adapter: o.adapter, hooks, gate,
       model: row.model || s.defaultModel, cwd: o.workspace,
-      system: systemPrompt, tools: () => [...tools, ...subs.tools()], services: { shells },
+      system: systemPrompt, tools: () => [...tools, ...subs.tools(), memory.tool(chatId)], services: { shells },
       maxConcurrency: s.maxConcurrency, maxTurns: s.maxTurnsMain, maxOutputTokens: s.maxOutputTokens,
       reasoning: s.reasoning as Reasoning, history: store.loadMessages(chatId)
     })
@@ -187,12 +201,13 @@ export function createAgent(o: AgentOptions): Agent {
       sessions.get(id)?.stop()
       sessions.delete(id)
       store.deleteSession(id)
+      memory.index.forget(id)
     },
     renameChat(id, title) {
       const t = title.replace(/\s+/g, ' ').trim().slice(0, 120)
       if (t && store.getSession(id)) store.updateSession(id, { title: t })
     },
-    async send(chatId, prompt, attachments = []) {
+    async send(chatId, prompt, attachments = [], qid) {
       const session = sessionFor(chatId)
       const s = o.settings()
       session.setModel(s.defaultModel)
@@ -200,13 +215,20 @@ export function createAgent(o: AgentOptions): Agent {
       if (store.getSession(chatId)?.title === 'New chat') {
         store.updateSession(chatId, { title: prompt.replace(/\s+/g, ' ').trim().slice(0, 60) || (attachments.length ? `Attached: ${attachments.map((a) => a.name).join(', ')}`.slice(0, 60) : 'New chat'), model: s.defaultModel })
       }
-      const result = await session.send(prompt, attachments)
+      // Context memory adds recall hints and compacts a long chat before the prompt; a busy chat queues it as is.
+      const result = await memory.send(chatId, session, prompt, {
+        attachments, qid, auto: AUTO_COMPACT,
+        onError: () => { /* compaction is best effort; the prompt is still sent */ }
+      })
       if (result.status !== 'queued' && store.getSession(chatId)) {
         store.saveMessages(chatId, session.history)
+        memory.indexTurns(chatId, session.history)
         store.touchSession(chatId)
       }
       return result
     },
+    unqueue: (chatId, qid) => sessions.get(chatId)?.unqueue(qid) ?? false,
+    queued: (chatId) => queuedView(sessions.get(chatId)?.queued ?? []),
     stop: (chatId) => sessions.get(chatId)?.stop(),
     isBusy: (chatId) => sessions.get(chatId)?.isBusy ?? false,
     append(chatId, messages) {

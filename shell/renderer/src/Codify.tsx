@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Chat as ChatRow } from '../../shared/api'
-import { applyEvent, fromMessages, type Attachment, type Item } from 'neovai-kernel/cards/chat-view'
+import { applyChatEvent, applyEvent, fromMessages, restoreDraft, type Attachment, type Item, type QueuedPrompt } from 'neovai-kernel/cards/chat-view'
 import { Composer, MessageList, SessionList, TurnRail } from 'neovai-kernel/cards/chat-view/react'
 import { LINKS } from './links'
 import Markdown from './Markdown'
+import { attachedFiles, memoryView, prepareAttachment } from './attach'
 
 /** A screen or the Skills page asking Codify for a change. `prompt` is used as is; otherwise the request is about `screen`. `at` makes each click a new request. */
 export interface CodifyRequest { screen?: string; title?: string; text?: string; prompt?: string; at: number }
@@ -22,6 +23,21 @@ export default function Codify({ request }: { request?: CodifyRequest | null }) 
   const scroller = useRef<HTMLDivElement>(null)
   const busyRef = useRef(busy)
   busyRef.current = busy
+  // Prompts sent while Codify was working, per request, until it reads them (kernel prompt queue).
+  const [queues, setQueues] = useState<Record<string, QueuedPrompt[]>>({})
+  const queuesRef = useRef(queues)
+  const setQueue = (id: string, q: QueuedPrompt[]) => { queuesRef.current = { ...queuesRef.current, [id]: q }; setQueues(queuesRef.current) }
+  const activeRef = useRef(active)
+  activeRef.current = active
+  // Prompts a stop handed back for a request that was not on screen; they return to the box when it is opened.
+  const returned = useRef<Record<string, QueuedPrompt[]>>({})
+  const [restore, setRestore] = useState<{ at: number; attachments: Attachment[] }>()
+  const giveBack = (list: QueuedPrompt[]) => {
+    if (!list.length) return
+    setDraft((d) => restoreDraft(d, list))
+    setRestore({ at: Date.now(), attachments: list.flatMap((q) => q.attachments ?? []) })
+    setTimeout(() => box.current?.focus())
+  }
 
   const refresh = useCallback(() => {
     return window.api.listChats().then(setChats)
@@ -29,11 +45,15 @@ export default function Codify({ request }: { request?: CodifyRequest | null }) 
 
   const select = useCallback(async (id: string) => {
     setActive(id)
+    const back = returned.current[id]
+    if (back) { delete returned.current[id]; giveBack(back) }
     // A running chat keeps what it has streamed so far; anything else is reloaded from disk.
     if (busyRef.current[id]) return
-    const { messages, busy: b } = await window.api.openChat(id)
-    setItems((s) => ({ ...s, [id]: fromMessages(messages) }))
+    const { messages, busy: b, queued } = await window.api.openChat(id)
+    setItems((s) => ({ ...s, [id]: memoryView(fromMessages(messages)) }))
     setBusy((s) => ({ ...s, [id]: b }))
+    // After a reload the window has lost its chips; the session still holds the prompts.
+    if (queued?.length && !(queuesRef.current[id] ?? []).length) setQueue(id, queued)
   }, [])
 
   useEffect(() => {
@@ -42,6 +62,17 @@ export default function Codify({ request }: { request?: CodifyRequest | null }) 
       // A background helper finishing can start a new main turn on its own.
       if (e.agentId === 'main' && e.kind !== 'agent_end' && !busyRef.current[chatId]) setBusy((s) => ({ ...s, [chatId]: true }))
       if (e.kind === 'agent_end' && e.agentId === 'main') { setBusy((s) => ({ ...s, [chatId]: false })); refresh(); return }
+      if (e.kind === 'user_input' || e.kind === 'queue_cleared') {
+        // Codify has just read a queued prompt (it moves into the thread), or a stop handed prompts back.
+        const r = applyChatEvent({ items: [], queue: queuesRef.current[chatId] ?? [] }, e)
+        setQueue(chatId, r.queue)
+        if (r.items.length) setItems((s) => ({ ...s, [chatId]: [...(s[chatId] ?? []), ...r.items] }))
+        if (r.restored.length) {
+          if (activeRef.current === chatId) giveBack(r.restored)
+          else returned.current[chatId] = [...(returned.current[chatId] ?? []), ...r.restored]
+        }
+        return
+      }
       setItems((s) => {
         const cur = s[chatId] ?? []
         const next = applyEvent(cur, e)
@@ -88,7 +119,7 @@ export default function Codify({ request }: { request?: CodifyRequest | null }) 
     try {
       const r = await window.api.publish(id)
       if (r.status === 'refused') setItems((s) => ({ ...s, [id]: [...(s[id] ?? []), { kind: 'error', text: r.text }] }))
-      else { const { messages } = await window.api.openChat(id); setItems((s) => ({ ...s, [id]: fromMessages(messages) })) }
+      else { const { messages } = await window.api.openChat(id); setItems((s) => ({ ...s, [id]: memoryView(fromMessages(messages)) })) }
     } catch (e) {
       const text = String((e as Error)?.message ?? e)
       setItems((s) => ({ ...s, [id]: [...(s[id] ?? []), { kind: 'error', text }] }))
@@ -98,19 +129,35 @@ export default function Codify({ request }: { request?: CodifyRequest | null }) 
   }
 
   const send = async (prompt: string, atts: Attachment[] = []) => {
-    if ((!prompt && !atts.length) || running) return
+    if (!prompt && !atts.length) return
     const id = active ?? (await newChat())
     setDraft('')
     const images = atts.flatMap((a) => (a.kind === 'image' ? [a.dataUrl] : []))
-    const files = atts.flatMap((a) => (a.kind === 'text' ? [a.name] : []))
-    setItems((s) => ({ ...s, [id]: [...(s[id] ?? []), { kind: 'user', text: prompt, ...(images.length ? { images } : {}), ...(files.length ? { files } : {}) }] }))
-    setBusy((s) => ({ ...s, [id]: true }))
+    const files = attachedFiles(atts)
+    const qid = crypto.randomUUID()
+    const view = { text: prompt, ...(images.length ? { images } : {}), ...(files.length ? { files } : {}) }
+    // While Codify works, the prompt waits as a chip and joins the request at its next step.
+    const waiting = !!busyRef.current[id]
+    if (waiting) setQueue(id, [...(queuesRef.current[id] ?? []), { qid, ...view, ...(atts.length ? { attachments: atts } : {}) }])
+    else {
+      setItems((s) => ({ ...s, [id]: [...(s[id] ?? []), { kind: 'user', ...view }] }))
+      setBusy((s) => ({ ...s, [id]: true }))
+    }
     let failure: string | null = null
     try {
-      const r = await window.api.send(id, prompt, atts)
+      const r = await window.api.send(id, prompt, atts, qid)
+      // The run already in progress owns the working state; its end clears it.
+      if (r.status === 'queued') return
       if (r.status === 'failed') failure = r.text || 'The run failed.'
     } catch (e) {
       failure = String((e as Error)?.message ?? e)
+    }
+    if (failure && waiting && (queuesRef.current[id] ?? []).some((q) => q.qid === qid)) {
+      // It never reached Codify (for example no model is chosen): take the chip away and say why.
+      setQueue(id, (queuesRef.current[id] ?? []).filter((q) => q.qid !== qid))
+      const text = failure
+      setItems((s) => ({ ...s, [id]: [...(s[id] ?? []), { kind: 'error', text }] }))
+      return
     }
     setBusy((s) => ({ ...s, [id]: false }))
     if (failure) {
@@ -121,6 +168,16 @@ export default function Codify({ request }: { request?: CodifyRequest | null }) 
       })
     }
     refresh()
+  }
+
+  const unqueue = async (q: QueuedPrompt) => {
+    const id = active
+    if (!id) return
+    // false: Codify already has it, and it shows in the thread instead.
+    if (!(await window.api.unqueue(id, q.qid))) return
+    if (!(queuesRef.current[id] ?? []).some((x) => x.qid === q.qid)) return
+    setQueue(id, (queuesRef.current[id] ?? []).filter((x) => x.qid !== q.qid))
+    giveBack([q])
   }
 
   return (
@@ -153,12 +210,16 @@ export default function Codify({ request }: { request?: CodifyRequest | null }) 
             value={draft}
             onChange={setDraft}
             onSend={(text, atts) => void send(text, atts)}
+            prepareAttachment={prepareAttachment}
             running={running}
+            queue={active ? queues[active] ?? [] : []}
+            onUnqueue={(q) => void unqueue(q)}
+            restore={restore}
             onStop={() => active && window.api.stop(active)}
             onPublish={() => void publish()}
             publishing={publishing}
             publishTitle="Publish: commit and push all changes to the repository"
-            placeholder="Describe a change, for example: show sector performance as a table on Today. Attach a screenshot or file with the paperclip, paste or drop."
+            placeholder="Describe a change, for example: show sector performance as a table on Today. Attach a screenshot, PDF, Word, PowerPoint or Excel file with the paperclip, paste or drop. You can keep typing while Codify works; it reads new messages at its next step."
           />
         </div>
       </section>

@@ -9,9 +9,9 @@ import { seedWorkspace } from '../shell/main/seed'
 const defaults = path.join(__dirname, '..', 'workspace', 'skills')
 
 describe('default skills', () => {
-  it('ships the five daily-loop skills in order, each with a description', () => {
+  it('ships the daily-loop skills and the retail scan in order, each with a description', () => {
     const skills = loadSkills(defaults)
-    expect(skills.map((s) => s.name)).toEqual(['user-preference', 'market-scan', 'candidate-evaluation', 'recommendation', 'performance-review'])
+    expect(skills.map((s) => s.name)).toEqual(['user-preference', 'market-scan', 'candidate-evaluation', 'recommendation', 'performance-review', 'retail-scan'])
     for (const s of skills) {
       expect(s.description.length).toBeGreaterThan(20)
       expect(s.body.length).toBeGreaterThan(200)

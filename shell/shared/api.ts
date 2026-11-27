@@ -2,9 +2,11 @@ import type { AgentEvent, Attachment, Message } from 'neovai-kernel/cards/agent-
 import type { Settings } from 'neovai-kernel/cards/settings'
 import type { ModelGroup } from 'neovai-kernel/cards/model-providers'
 import type { SessionRow } from 'neovai-kernel/cards/session-store'
+import type { QueuedPrompt } from 'neovai-kernel/cards/chat-view'
 import type { Decision, PanelResult, Recommendation, RunInput, ScreenState } from 'neovai-kernel/cards/live-ui'
 import type { AppSettings } from '../main/app-settings'
 
+export type { QueuedPrompt }
 export type { AgentEvent, Message, Settings, AppSettings, ModelGroup, PanelResult, ScreenState, Decision, Recommendation }
 export type Chat = SessionRow
 
@@ -65,11 +67,17 @@ export interface Api {
   saveGoals(g: Goals): Promise<void>
   listChats(): Promise<Chat[]>
   newChat(): Promise<Chat>
-  openChat(id: string): Promise<{ messages: Message[]; busy: boolean }>
+  /** `queued`: prompts sent while Codify was working that have not reached it yet. */
+  openChat(id: string): Promise<{ messages: Message[]; busy: boolean; queued: QueuedPrompt[] }>
   deleteChat(id: string): Promise<void>
   renameChat(id: string, title: string): Promise<void>
   /** Images and files go to the model with the prompt (see the kernel chat-view Composer). */
-  send(chatId: string, prompt: string, attachments?: Attachment[]): Promise<SendResult>
+  /** While Codify is working the prompt is queued under `qid` and joins the request at its next step (status 'queued'). */
+  send(chatId: string, prompt: string, attachments?: Attachment[], qid?: string): Promise<SendResult>
+  /** Takes a queued prompt back; false if Codify already has it. */
+  unqueue(chatId: string, qid: string): Promise<boolean>
+  /** Keeps an attached file (base64) in the workspace's records/attachments/ so the agents can read it again; returns its workspace path. */
+  saveAttachment(name: string, data: string): Promise<string>
   stop(chatId: string): Promise<void>
   listSkills(): Promise<SkillInfo[]>
   /** The full SKILL.md of one skill, read from disk. */
@@ -81,7 +89,7 @@ export interface Api {
   /** Replaces the holdings the user added by hand (records/data/holdings.json) and returns them cleaned. Throws a plain message on a bad item. */
   saveHoldings(items: ManualHolding[]): Promise<ManualHolding[]>
   mainState(): Promise<MainState>
-  /** Starts a job; `input` holds options picked on the screen. The result arrives through onRunEvent and mainState. */
+  /** Starts a job; `input` holds options picked on the screen. Images and PDFs in `input.attachments` (from the panel prop readAttachments) go to the model with the run's message. The result arrives through onRunEvent and mainState. */
   runJob(job: string, input?: RunInput): Promise<{ ok: boolean; error?: string }>
   stopJob(job: string): Promise<void>
   loadPanel(file: string): Promise<PanelResult>
@@ -103,7 +111,7 @@ export const PANEL_LIBRARIES = ['recharts', 'lucide-react', 'date-fns'] as const
 
 export const CHANNELS = [
   'info', 'secretsEncrypted', 'getSettings', 'saveSettings', 'listModels', 'getGoals', 'saveGoals',
-  'listChats', 'newChat', 'openChat', 'deleteChat', 'renameChat', 'send', 'stop', 'listSkills', 'readSkill', 'saveSkill', 'decide', 'saveHoldings',
+  'listChats', 'newChat', 'openChat', 'deleteChat', 'renameChat', 'send', 'unqueue', 'stop', 'saveAttachment', 'listSkills', 'readSkill', 'saveSkill', 'decide', 'saveHoldings',
   'mainState', 'runJob', 'stopJob', 'loadPanel', 'reportPanelError', 'panelFetch', 'publish'
 ] as const
 export const EVENT_CHANNEL = 'agent-event'

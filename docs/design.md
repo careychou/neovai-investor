@@ -79,15 +79,16 @@ All 27 cards are built in the kernel. An app chooses which to compose.
 | 16 | goals | Typed access to the user's goals | yes |
 | 17 | git-sync | Pushes applied changes to a remote branch | yes |
 | 18 | sub-agents | Child agents | no |
-| 19 | compaction | Context compaction | no |
+| 19 | compaction | Context compaction: the context-memory card (kernel v0.16.0) summarizes a long Codify chat by turns and keeps every turn searchable with `recall` | yes |
 | 20 | skills-loader | Loads skills and agents from the project and home folders | no |
 | 21 | mcp | MCP servers with OAuth | no |
-| 22 | memory | Long-term notes across runs | no |
+| 22 | memory | Recall across chats: context-memory's keyword index over every Codify turn (no long-term notes) | partly |
 | 23 | notifications | macOS notifications | no |
-| 24 | attachments | Image and document attachments | no |
+| 24 | attachments | Images, text, PDFs (sent to Claude as the file, as text to other models, as page images when scanned), Word, PowerPoint, Excel and HTML (as text), through the composer's `prepareAttachment` (`shell/renderer/src/attach.ts`, kernel v0.18.0). Originals are kept in `records/attachments/` (never published) so the agents can reopen them by path. Job runs take attachments too (kernel v0.19.0): a panel reads files with `readAttachments` and passes them as `input.attachments` | yes |
 | 25 | chat-view | Shared chat timeline (kernel v0.3.0): messages, a collapsible thoughts block, tool calls grouped and collapsed, as data plus React and CSS. Used by Codify and the run log. Since v0.6.0: the standard `Composer` attaches images and text files (button, paste, drag and drop; images downscaled in the window) and user messages show image thumbnails. Since v0.8.0: tool rows read in plain words (each call's `intent`), three levels: a summary row opens to its plain-language steps, and each step opens to its input and output. Since v0.10.0: the attach button is a paperclip icon; both agents follow the kernel's plain-language rules | yes |
 | 26 | runtime-agent | Runs workspace jobs (`jobs/<name>.md`) for the Main App; every skill is appended in full, in order, to its instruction and re-read each run; writes only under `records/`; `save_data` feeds the screens. Since v0.7.0: `run(job, input)` passes options picked on a screen to the agent and records them with the report | yes |
 | 27 | live-ui | Main App screens described in `ui/screens/*.json` with built-in blocks; `panel` blocks compile workspace `.tsx` files at runtime and keep the last good build; `check_ui` tool for Codify. Since v0.4.0: `decide` on recommendation blocks (Accept/Decline saved to `records/data/decisions.json`, read-only to agents) and live run status (elapsed time, current step, activity). Since v0.5.0: a screen lists the `skills` it is built on, a `skill` block shows a skill's text, and every screen has a Codify bar (change the screen, or open one of its skills). Since v0.7.0: panels import the app API from `@neovai/panel` (`useApp`: data, run jobs with options, stop, progress, last report, decide, Codify; `usePanelState`; `Blocks`, `RunButton`, `Markdown`), plus libraries the app allows (Investor: recharts, lucide-react, date-fns); `run` blocks take `input`. Since v0.8.0: panels get `prefs`/`savePrefs`; the Preferences screen (first tab) owns `goals.json`, removed from Settings. Since v0.9.0: `chart` block and `<Chart>` component (candlesticks, line, area, bar, volume, last-price tag, crosshair), `useFetch`/`fetchJson`/`fetchText` through the main process `panelFetch` (CSP keeps the window offline), `.css` imports and react-dom in panels | yes |
+| 28 | prompt-queue | Messages sent while Codify works wait as chips (Next, +1…) and join the same request at its next step; × or Stop puts them back in the box (kernel v0.20.0). Model calls that drop mid-reply are retried (kernel v0.21.0) | yes |
 
 ## 4. The daily loop
 

@@ -32,7 +32,7 @@ flowchart TB
   end
   subgraph KERNEL["Kernel cards (pinned tag) — neovai-kernel"]
     direction LR
-    LOOP["agent-loop<br/>model-providers<br/>approval · session-store"]
+    LOOP["agent-loop<br/>model-providers<br/>approval · session-store<br/>context-memory"]
     TOOLS["file-tools · shell<br/>web-fetch · skills<br/>sub-agents"]
     RUNC["runtime-agent"]
     UIC["live-ui · chat-view<br/>git-publish · settings"]
@@ -191,6 +191,10 @@ flowchart LR
    rebuilt each turn from `instructions/system.md`, the skills, the jobs and the preferences. Each chat also gets
    a `SubAgents` (sub-agents card) attached to its session: the `task` tool runs helpers in parallel or in the
    background, Stop cancels them all, and a finished background helper wakes the chat (`session.notify`).
+   Prompts go through `ContextMemory.send` (context-memory card): it adds short recall hints to a new prompt,
+   summarizes a long chat once it passes about 120k tokens and has been idle, and gives the chat a `recall` tool
+   that searches every earlier turn, including the summarized ones. A prompt sent while Codify is working is not
+   refused: the session queues it under a `qid` and adds it at the agent's next step (`api.unqueue` takes it back).
 6. **Publish**: the `publish` handler calls `publish()` (git-publish card) with the Settings repository; for a
    remote address it downloads it into a temporary folder (deleted afterwards), mirrors the workspace into its `workspace/`, commits and pushes. The commit message is written by the default model (`commitMessageWriter`) from the staged diff and the Codify requests made since the last commit (`shell/main/publish-context.ts`): a subject, a "Why:" reason and a "What changed:" list, falling back to a short folder summary if the model fails. It sends each step to the window
    as Codify chat events, and saves the steps into that chat (`agent.append`).
@@ -353,7 +357,7 @@ tag in `kernel.json`.
 
 ```sh
 git clone https://github.com/careychou/neovai-kernel ../neovai-kernel
-git -C ../neovai-kernel checkout v0.17.0
+git -C ../neovai-kernel checkout v0.21.0
 npm install
 npm run build && npx electron .
 ```

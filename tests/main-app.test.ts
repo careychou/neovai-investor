@@ -16,7 +16,7 @@ afterEach(() => { if (tmp) fs.rmSync(tmp, { recursive: true, force: true }) })
 describe('shipped workspace', () => {
   it('has screens and panels that load, and jobs for every run block', () => {
     const ui = createLiveUi({ workspace: bundled, externals: [...DEFAULT_EXTERNALS, ...PANEL_LIBRARIES] })
-    expect(ui.check()).toMatch(/^OK: preferences, today, candidates, recommendations, review/)
+    expect(ui.check()).toMatch(/^OK: preferences, today, retail, candidates, recommendations, review/)
     // Every screen names the skills it is built on, and each shipped skill has a screen.
     const skills = fs.readdirSync(path.join(bundled, 'skills'))
     const used = ui.screens().flatMap((s) => s.screen?.skills ?? [])

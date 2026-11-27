@@ -15,6 +15,7 @@ import { HOLDINGS_FILE, saveHoldings } from './holdings'
 import { seedWorkspace } from './seed'
 import { commitMessageWriter, publish } from 'neovai-kernel/cards/git-publish'
 import { publishContext } from './publish-context'
+import { saveAttachment, splitRunInput } from './attachments'
 import { writeSkill, type SkillSource } from 'neovai-kernel/cards/skills'
 import { APP_DEFAULTS, runtimeModelOf, type AppSettings } from './app-settings'
 import { CHANGED_CHANNEL, CHANNELS, PANEL_LIBRARIES, EVENT_CHANNEL, RUN_EVENT_CHANNEL, type Api, type AppInfo, type MainState } from '../shared/api'
@@ -157,13 +158,15 @@ app.whenReady().then(() => {
     saveGoals: async (g) => { saveGoals(workspace, g) },
     listChats: async () => agent.listChats(),
     newChat: async () => agent.newChat(),
-    openChat: async (id) => ({ messages: agent.openChat(id), busy: agent.isBusy(id) }),
+    openChat: async (id) => ({ messages: agent.openChat(id), busy: agent.isBusy(id), queued: agent.queued(id) }),
     deleteChat: async (id) => agent.deleteChat(id),
     renameChat: async (id, title) => agent.renameChat(id, title),
-    send: async (chatId, prompt, attachments) => {
+    send: async (chatId, prompt, attachments, qid) => {
       if (!settings.defaultModel) return { status: 'failed', text: 'Choose a model in Settings first.' }
-      return agent.send(chatId, prompt, attachments)
+      return agent.send(chatId, prompt, attachments, qid)
     },
+    unqueue: async (chatId, qid) => agent.unqueue(chatId, qid),
+    saveAttachment: async (name, data) => saveAttachment(workspace, name, data),
     stop: async (chatId) => agent.stop(chatId),
     listSkills: async () => agent.skills().map((s) => ({ name: s.name, description: s.description, source: s.source ?? 'Workspace', editable: s.editable !== false })),
     readSkill: async (name) => {
@@ -183,12 +186,13 @@ app.whenReady().then(() => {
     decide: async (rec, decision) => { ui.decide(rec, decision); changed() },
     saveHoldings: async (items) => { const r = saveHoldings(workspace, items); changed(); return r },
     mainState: async () => mainState(),
-    runJob: async (job, input) => {
+    runJob: async (job, raw) => {
+      const { input, attachments } = splitRunInput(raw)
       if (!runtimeModelOf(settings)) return { ok: false, error: 'Choose a model in Settings first.' }
       if (runtime.running().includes(job)) return { ok: false, error: `"${job}" is already running` }
       // Runs in the background; the window follows it through run events and a change notice at each end.
       started[job] = Date.now()
-      runtime.run(job, input).catch((e) => win?.webContents.send(RUN_EVENT_CHANNEL, job, { kind: 'error', message: String(e?.message ?? e) })).finally(changed)
+      runtime.run(job, input, attachments).catch((e) => win?.webContents.send(RUN_EVENT_CHANNEL, job, { kind: 'error', message: String(e?.message ?? e) })).finally(changed)
       changed()
       return { ok: true }
     },

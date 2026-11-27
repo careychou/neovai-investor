@@ -8,6 +8,7 @@ import Markdown from './Markdown'
 import Settings from './Settings'
 import Skills from './Skills'
 import { LINKS } from './links'
+import { readAttachments } from './attach'
 
 const EMPTY: MainState = { screens: [], data: {}, jobs: [], running: [], started: {}, reports: {}, skills: {} }
 
@@ -69,7 +70,7 @@ export default function App() {
       else { setCodifyReq({ ...req, at: Date.now() }); setTab('codify') }
     },
     // saveHoldings lets the Performance panel keep holdings the user added by hand (records/data/holdings.json).
-    panelProps: { goals, saveHoldings: (items: ManualHolding[]) => window.api.saveHoldings(items) },
+    panelProps: { goals, readAttachments, saveHoldings: (items: ManualHolding[]) => window.api.saveHoldings(items) },
     prefs: goals ?? {},
     savePrefs: async (p) => { await window.api.saveGoals(p as Goals); loadGoals() },
     Markdown,
