@@ -6,6 +6,7 @@ import { RefreshCw, ShoppingCart, CalendarDays, TrendingUp, Users } from 'lucide
 import { useQuotes } from './lib/useQuotes'
 import { SEGMENTS, segmentName, avg } from './lib/retail'
 import { TickerDetail } from './RecommendationsPanel'
+import RetailDigest from './RetailDigest'
 
 type AnyObj = Record<string, any>
 const asObjs = (v: unknown): AnyObj[] => (Array.isArray(v) ? (v as AnyObj[]) : [])
@@ -34,6 +35,8 @@ export default function RetailPanel() {
   const r: AnyObj | null = data?.retail ?? null
   const [seg, setSeg] = usePanelState<string>('retail.segment', 'all')
   const [open, setOpen] = useState<string | null>(null)
+  const [view, setView] = usePanelState<'market' | 'digest'>('retail.view', 'market')
+  const digestCount = r?.digest ? asObjs(r.digest.top).length + asObjs(r.digest.lanes).reduce((n, l) => n + asObjs(l.items).length, 0) : 0
 
   const allTickers = useMemo(() => SEGMENTS.flatMap((s) => s.tickers), [])
   const { quotes, loading, reload } = useQuotes(allTickers)
@@ -69,6 +72,13 @@ export default function RetailPanel() {
         </div>
       </div>
 
+      {/* View switch */}
+      <div style={{ display: 'flex', gap: 6, marginTop: 14, borderBottom: BORDER, paddingBottom: 8 }}>
+        <button className={view === 'market' ? 'button primary' : 'button'} onClick={() => setView('market')}>Retail market</button>
+        <button className={view === 'digest' ? 'button primary' : 'button'} onClick={() => setView('digest')}>3-day digest{digestCount ? ` · ${digestCount}` : ''}</button>
+      </div>
+
+      {view === 'digest' ? <div style={{ marginTop: 10 }}><RetailDigest digest={r?.digest} /></div> : <>
       {/* Segment cards with live prices */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
         <span style={{ fontWeight: 700, fontSize: 13 }}>Segments today <span style={{ ...muted, fontWeight: 400 }}>· live prices, average day change · click a card to filter the news</span></span>
@@ -222,6 +232,8 @@ export default function RetailPanel() {
           )}
         </section>
       </div>
+
+      </>}
 
       <div style={{ ...muted, marginTop: 10 }}>Segment prices are live from Yahoo Finance (refresh every 5 minutes); news, data and dates come from the last retail scan. Click any ticker for what the company does, its chart and key stats.</div>
 

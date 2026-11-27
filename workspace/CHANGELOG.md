@@ -8,6 +8,19 @@ Format: date · area · short title, then what changed, why, files, and the comm
 
 ---
 
+## 2026-11-27 · skill, job, ui · Retail scan adds a 3-day, five-lane news digest
+- **What:** Each retail scan now also builds a digest of the last 3 days: 15 to 22 stories across five lanes
+  (Grocery & Retail, Technology including security, Analytics / Data Science / ML, AI frontier and applications, Design & human-AI experience),
+  each with a short headline, a 2 to 4 sentence paragraph and source links. Every story must be confirmed by at least two independent
+  outlets and dated inside the window; unverified candidates are listed as "left out". Three "Top 3 for retail" stories carry a specific
+  "Retail angle" on what they mean for grocers, retailers and retail stocks. The Retail tab gets a "3-day digest" view next to
+  "Retail market", in a tile layout: three stat boxes (stories tracked, top picks, lanes covered), a coloured label per lane, and one
+  full-width card per story, with lane filters. Adapted from a personal digest brief, with personal names, the employer, the email
+  delivery and the search-only workaround removed. Also removed an employer name from the retail-scan private-grocer list.
+- **Why:** The user wanted the retail scan to cover these lanes in one place, safe for a public repository.
+- **Files:** skills/retail-scan/SKILL.md, jobs/retail.md, ui/RetailDigest.tsx (new), ui/RetailPanel.tsx, CHANGELOG.md
+- **Commit:** _not yet published_
+
 ## 2026-11-25 · skill, job, ui · New Retail tab with its own retail scan
 - **What:** New "Retail" tab, after Market Scan, with a "Run retail scan" button. Its panel shows:
   a retail mood and summary; seven segment cards (Grocery, Big box & clubs, Discount & dollar, Consumer staples, Home improvement,
@@ -15,12 +28,12 @@ Format: date · area · short title, then what changed, why, files, and the comm
   retail news tagged by segment and good/bad impact; what the news means for the user's own retail stocks; upcoming earnings and
   data dates; shopper and price data (retail sales, food inflation, sentiment); trends moving retail; and ideas worth a closer look.
   Any ticker opens the stock detail window. New retail-scan skill (segments, tickers, sources such as CNBC retail, Grocery Dive,
-  Retail Dive, Supermarket News; private grocers like H-E-B covered through their effect on listed names) and new retail job that saves "retail".
+  Retail Dive, Supermarket News; private grocers like Aldi and Publix covered through their effect on listed names) and new retail job that saves "retail".
   Tab order is now Preferences, Market Scan, Retail, Candidates, Recommendations, Performance.
 - **Why:** The user wanted one place for the important retail news across grocery, big box, consumer staples and related segments.
 - **Files:** skills/retail-scan/SKILL.md (new), jobs/retail.md (new), ui/screens/retail.json (new), ui/RetailPanel.tsx (new), ui/lib/retail.ts (new),
   ui/screens/candidates.json, ui/screens/recommendations.json, ui/screens/review.json (tab order), CHANGELOG.md
-- **Commit:** _not yet published_
+- **Commit:** 8e2f765
 
 ## 2026-11-25 · ui · Performance: two clear rows, "App picks" and "My funds"
 - **What:** Replaced the mixed summary cards and the separate Total dividends box with two labelled rows of seven cards.
