@@ -8,6 +8,20 @@ Format: date · area · short title, then what changed, why, files, and the comm
 
 ---
 
+## 2026-11-25 · skill, job, ui · New Retail tab with its own retail scan
+- **What:** New "Retail" tab, after Market Scan, with a "Run retail scan" button. Its panel shows:
+  a retail mood and summary; seven segment cards (Grocery, Big box & clubs, Discount & dollar, Consumer staples, Home improvement,
+  Online & department, Sector funds) with live prices and average day change; click a card to filter the news; retail alerts;
+  retail news tagged by segment and good/bad impact; what the news means for the user's own retail stocks; upcoming earnings and
+  data dates; shopper and price data (retail sales, food inflation, sentiment); trends moving retail; and ideas worth a closer look.
+  Any ticker opens the stock detail window. New retail-scan skill (segments, tickers, sources such as CNBC retail, Grocery Dive,
+  Retail Dive, Supermarket News; private grocers like H-E-B covered through their effect on listed names) and new retail job that saves "retail".
+  Tab order is now Preferences, Market Scan, Retail, Candidates, Recommendations, Performance.
+- **Why:** The user wanted one place for the important retail news across grocery, big box, consumer staples and related segments.
+- **Files:** skills/retail-scan/SKILL.md (new), jobs/retail.md (new), ui/screens/retail.json (new), ui/RetailPanel.tsx (new), ui/lib/retail.ts (new),
+  ui/screens/candidates.json, ui/screens/recommendations.json, ui/screens/review.json (tab order), CHANGELOG.md
+- **Commit:** _not yet published_
+
 ## 2026-11-25 · ui · Performance: two clear rows, "App picks" and "My funds"
 - **What:** Replaced the mixed summary cards and the separate Total dividends box with two labelled rows of seven cards.
   App picks: Value, Cash, Invested, Unrealized, Realized + dividends (with trades sold and win rate), Dividends + interest, Total profit vs goal (with progress bar).
@@ -15,7 +29,7 @@ Format: date · area · short title, then what changed, why, files, and the comm
   The header keeps the combined account value and today's change. No numbers mix the two groups except that header total.
 - **Why:** The user found the cards confusing because app-pick and own-fund numbers were blended across many boxes.
 - **Files:** ui/Portfolio.tsx, CHANGELOG.md
-- **Commit:** _not yet published_
+- **Commit:** 06ca6cf
 
 ## 2026-11-25 · ui, skill · Performance: total dividends at the top and "Realized + dividends" card
 - **What:** The Performance header shows a "Total dividends" box (dividends and interest actually paid on the app's calls plus

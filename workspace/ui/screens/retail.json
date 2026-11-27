@@ -1,0 +1,16 @@
+{
+  "title": "Retail",
+  "order": 2,
+  "skills": ["retail-scan"],
+  "blocks": [
+    {
+      "type": "row",
+      "blocks": [
+        { "type": "heading", "text": "Retail: grocery, big box, discount, staples" },
+        { "type": "run", "job": "retail", "label": "Run retail scan" }
+      ]
+    },
+    { "type": "panel", "file": "ui/RetailPanel.tsx" },
+    { "type": "report", "title": "Last retail report", "job": "retail" }
+  ]
+}
